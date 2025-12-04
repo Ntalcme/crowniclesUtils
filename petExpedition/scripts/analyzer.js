@@ -1,7 +1,7 @@
 // analyzer.js - Logique de l'analyseur d'expédition
 import { getPetById } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES } from './constants.js';
-import { formatDuration, calculateLinearScore } from './utils.js';
+import { formatDuration, calculateLinearScore, escapeHTML } from './utils.js';
 import {
     calculateEffectiveRisk,
     calculateSpeedDurationModifier,
@@ -59,12 +59,12 @@ function parseDuration(durationStr) {
 export function analyzeExpedition() {
     const petId = parseInt(document.getElementById('analyzerSelectedPetId').value, 10);
     const pet = getPetById(petId);
-    const lovePoints = parseInt(document.getElementById('analyzerLovePoints').value, 10);
+    const lovePoints = Math.max(80, Math.min(110, parseInt(document.getElementById('analyzerLovePoints').value, 10)));
 
     const riskKey = document.getElementById('analyzerRisk').value;
     const difficultyKey = document.getElementById('analyzerDifficulty').value;
     const rewardKey = document.getElementById('analyzerReward').value;
-    const foodIndex = parseInt(document.getElementById('analyzerFood').value, 10);
+    const foodIndex = Math.max(0, Math.min(9, parseInt(document.getElementById('analyzerFood').value, 10)));
     const durationStr = document.getElementById('analyzerDuration').value;
     const location = document.getElementById('analyzerLocation').value;
     const hasTalismanBonus = document.getElementById('analyzerTalismanBonus').checked;
@@ -83,9 +83,9 @@ export function analyzeExpedition() {
                 ${pet ? `
                 <div class="range-display">
                     <div class="label">🐾 Familier</div>
-                    <div class="values">${pet.name}</div>
+                    <div class="values">${escapeHTML(pet.name)}</div>
                     <div style="font-size: 0.85em; color: var(--text-secondary);">
-                        Force: ${pet.force} | Vitesse: ${pet.speed} | Amour: ${lovePoints}
+                        Force: ${escapeHTML(pet.force)} | Vitesse: ${escapeHTML(pet.speed)} | Amour: ${escapeHTML(lovePoints)}
                     </div>
                 </div>
                 ` : `
@@ -157,7 +157,7 @@ export function analyzeExpedition() {
         probabilitiesDiv.innerHTML = `
             <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
                 <p><strong>🚀 Durée effective :</strong> ${formatDuration(effectiveDuration)}
-                   <span style="color: var(--text-secondary);">(vitesse ${pet.speed} → ×${speedModifier.toFixed(2)})</span>
+                   <span style="color: var(--text-secondary);">(vitesse ${escapeHTML(pet.speed)} → ×${speedModifier.toFixed(2)})</span>
                 </p>
             </div>
             <h4 style="margin-bottom: 15px;">Scénarios selon les valeurs exactes de risque/difficulté :</h4>

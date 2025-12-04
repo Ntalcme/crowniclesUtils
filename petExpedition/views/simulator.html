@@ -33,7 +33,7 @@
             <div class="form-group">
                 <label>💕 Points d'amour (80-110)</label>
                 <div class="slider-container">
-                    <input type="range" id="lovePoints" min="80" max="110" value="80">
+                    <input type="range" id="lovePoints" min="80" max="110" value="80" aria-label="Points d'amour du familier">
                     <span class="slider-value" id="loveValue">80</span>
                 </div>
                 <small style="color: var(--text-secondary);">Minimum requis pour partir en expédition</small>
@@ -41,7 +41,7 @@
             <div class="form-group">
                 <label>⏱️ Durée de l'expédition (minutes)</label>
                 <div class="slider-container">
-                    <input type="range" id="duration" min="10" max="4320" value="120" step="10">
+                    <input type="range" id="duration" min="10" max="4320" value="120" step="10" aria-label="Durée de l'expédition en minutes">
                     <span class="slider-value" id="durationValue">2h</span>
                 </div>
                 <small style="color: var(--text-secondary);">10 min - 3 jours (4320 min)</small>
@@ -49,7 +49,7 @@
             <div class="form-group">
                 <label>⚠️ Dangerosité (0-100%)</label>
                 <div class="slider-container">
-                    <input type="range" id="riskRate" min="0" max="100" value="30">
+                    <input type="range" id="riskRate" min="0" max="100" value="30" aria-label="Dangerosité de l'expédition">
                     <span class="slider-value" id="riskValue">30%</span>
                 </div>
                 <small id="riskCategory" style="color: var(--text-secondary);">Catégorie: Faible</small>
@@ -57,7 +57,7 @@
             <div class="form-group">
                 <label>🎯 Difficulté du terrain (0-100)</label>
                 <div class="slider-container">
-                    <input type="range" id="difficulty" min="0" max="100" value="50">
+                    <input type="range" id="difficulty" min="0" max="100" value="50" aria-label="Difficulté du terrain">
                     <span class="slider-value" id="difficultyValue">50</span>
                 </div>
                 <small id="difficultyCategory" style="color: var(--text-secondary);">Catégorie: Modérée</small>
@@ -65,7 +65,7 @@
             <div class="form-group">
                 <label>💎 Taux de richesse (0.0-2.0)</label>
                 <div class="slider-container">
-                    <input type="range" id="wealthRate" min="0" max="200" value="100">
+                    <input type="range" id="wealthRate" min="0" max="200" value="100" aria-label="Taux de richesse de l'expédition">
                     <span class="slider-value" id="wealthValue">1.0</span>
                 </div>
                 <small id="wealthCategory" style="color: var(--text-secondary);">Catégorie: Modeste</small>

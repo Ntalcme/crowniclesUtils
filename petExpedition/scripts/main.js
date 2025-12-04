@@ -1,4 +1,3 @@
-// main.js - Point d'entrée de l'application
 import { fetchPetData } from './dataService.js';
 import {
     initPetDropdown,
@@ -7,6 +6,7 @@ import {
     initAnalyzerSliders,
     showToast
 } from './ui.js';
+import { escapeHTML } from './utils.js';
 import { simulateExpedition } from './simulator.js';
 import { analyzeExpedition } from './analyzer.js';
 
@@ -71,11 +71,11 @@ async function handleLoadData() {
 
     try {
         const { pets } = await fetchPetData(branch);
-        statusDiv.innerHTML = `<p style="color: var(--success);">✅ ${pets.length} familiers chargés avec succès depuis la branche <strong>${branch}</strong></p>`;
+        statusDiv.innerHTML = `<p style="color: var(--success);">✅ ${escapeHTML(pets.length)} familiers chargés avec succès depuis la branche <strong>${escapeHTML(branch)}</strong></p>`;
         revealSimulatorUI();
         showToast('✅ Données chargées !');
     } catch (error) {
-        statusDiv.innerHTML = `<p style="color: var(--danger);">❌ Erreur: ${error.message}</p>`;
+        statusDiv.innerHTML = `<p style="color: var(--danger);">❌ Erreur: ${escapeHTML(error.message)}</p>`;
     } finally {
         loadButton.disabled = false;
         loadButton.textContent = '🔄 Recharger les données';
@@ -94,7 +94,10 @@ async function bootstrap() {
     try {
         await loadViews();
     } catch (error) {
-        console.error(error);
+        // En production, logger l'erreur sans exposer les détails
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.error(error);
+        }
         alert('Impossible de charger les vues. Vérifiez que vous servez les fichiers via un serveur HTTP.');
         return;
     }

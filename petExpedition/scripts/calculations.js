@@ -2,6 +2,41 @@
 import { EXPEDITION_CONSTANTS } from './constants.js';
 import { calculateLinearScore, getCategoryName } from './utils.js';
 
+// Constantes pour le calcul du score de rentabilité
+const SCORE_WEIGHTS = {
+    REWARD: 0.35,
+    SUCCESS: 0.35,
+    TIME_EFFICIENCY: 0.15,
+    TALISMAN: 0.15
+};
+
+const SCORE_THRESHOLDS = {
+    HIGH_REWARD_INDEX: 7,
+    LOW_REWARD_INDEX: 2,
+    EXCELLENT_SUCCESS_RATE: 90,
+    POOR_SUCCESS_RATE: 50,
+    VERY_LONG_DURATION: 2880,
+    SHORT_DURATION: 60,
+    SHORT_DURATION_MIN_REWARD: 3,
+    HIGH_TALISMAN_CHANCE: 20,
+    NOTABLE_TALISMAN_CHANCE: 5,
+    VERY_SAFE_SUCCESS_RATE: 95,
+    SAFE_SUCCESS_RATE: 85,
+    HIGH_FAILURE_RATE: 40,
+    CRITICAL_FAILURE_RATE: 60,
+    SWEET_SPOT_MIN_INDEX: 4,
+    SWEET_SPOT_MAX_INDEX: 7,
+    SWEET_SPOT_MIN_SUCCESS: 70
+};
+
+const SCORE_BONUSES = {
+    VERY_SAFE: 0.08,
+    SAFE: 0.04,
+    SWEET_SPOT: 0.05,
+    TALISMAN_BONUS_MULTIPLIER: 1.5,
+    MAX_TALISMAN_BONUS: 0.1
+};
+
 export function calculateRewardIndex(durationMinutes, riskRate, difficulty, wealthRate) {
     const durationScore = calculateLinearScore(
         durationMinutes,
@@ -98,70 +133,78 @@ export function calculateProfitabilityScore(
     };
 
     details.rewardScore = (rewardIndex + 1) / 10;
-    if (rewardIndex >= 7) details.positives.push('Récompenses élevées');
-    else if (rewardIndex <= 2) details.issues.push('Récompenses faibles');
+    if (rewardIndex >= SCORE_THRESHOLDS.HIGH_REWARD_INDEX) details.positives.push('Récompenses élevées');
+    else if (rewardIndex <= SCORE_THRESHOLDS.LOW_REWARD_INDEX) details.issues.push('Récompenses faibles');
 
     details.successScore = (totalSuccessRate / 100) + (partialSuccessRate / 100) * 0.5;
-    if (totalSuccessRate >= 90) details.positives.push('Succès quasi-garanti');
-    else if (totalSuccessRate < 50) details.issues.push('Risque d’échec élevé');
+    if (totalSuccessRate >= SCORE_THRESHOLDS.EXCELLENT_SUCCESS_RATE) details.positives.push('Succès quasi-garanti');
+    else if (totalSuccessRate < SCORE_THRESHOLDS.POOR_SUCCESS_RATE) details.issues.push('Risque d\'échec élevé');
 
     const expectedDurationForIndex = 10 + (rewardIndex * 450);
     const durationRatio = expectedDurationForIndex / effectiveDuration;
     const timeEfficiency = Math.min(1.2, Math.max(0.5, durationRatio));
     details.timeEfficiency = (timeEfficiency - 0.5) / 0.7;
-    if (effectiveDuration > 2880) details.issues.push('Expédition très longue');
-    else if (effectiveDuration <= 60 && rewardIndex >= 3) details.positives.push('Bon ratio temps/récompense');
+    if (effectiveDuration > SCORE_THRESHOLDS.VERY_LONG_DURATION) details.issues.push('Expédition très longue');
+    else if (effectiveDuration <= SCORE_THRESHOLDS.SHORT_DURATION && rewardIndex >= SCORE_THRESHOLDS.SHORT_DURATION_MIN_REWARD) details.positives.push('Bon ratio temps/récompense');
 
     if (talismanChance > 0) {
         const effectiveTalismanChance = (talismanChance * totalSuccessRate) / 100;
-        details.talismanBonus = Math.min(0.1, effectiveTalismanChance / 100);
-        if (hasTalismanBonus && effectiveTalismanChance > 20) {
+        details.talismanBonus = Math.min(SCORE_BONUSES.MAX_TALISMAN_BONUS, effectiveTalismanChance / 100);
+        if (hasTalismanBonus && effectiveTalismanChance > SCORE_THRESHOLDS.HIGH_TALISMAN_CHANCE) {
             details.positives.push('Bonus talisman ×10 actif');
-            details.talismanBonus *= 1.5;
-        } else if (effectiveTalismanChance > 5) {
+            details.talismanBonus *= SCORE_BONUSES.TALISMAN_BONUS_MULTIPLIER;
+        } else if (effectiveTalismanChance > SCORE_THRESHOLDS.NOTABLE_TALISMAN_CHANCE) {
             details.positives.push('Chance de talisman notable');
         }
     }
 
-    const baseScore = (details.rewardScore * 0.35)
-        + (details.successScore * 0.35)
-        + (details.timeEfficiency * 0.15)
-        + (details.talismanBonus * 0.15 / 0.15);
+    const baseScore = (details.rewardScore * SCORE_WEIGHTS.REWARD)
+        + (details.successScore * SCORE_WEIGHTS.SUCCESS)
+        + (details.timeEfficiency * SCORE_WEIGHTS.TIME_EFFICIENCY)
+        + (details.talismanBonus * SCORE_WEIGHTS.TALISMAN / SCORE_WEIGHTS.TALISMAN);
 
-    details.safetyBonus = totalSuccessRate > 95 ? 0.08 : (totalSuccessRate > 85 ? 0.04 : 0);
-    details.failurePenalty = failureRate > 40 ? (failureRate - 40) / 200 : 0;
-    details.sweetSpotBonus = (rewardIndex >= 4 && rewardIndex <= 7 && totalSuccessRate > 70) ? 0.05 : 0;
+    details.safetyBonus = totalSuccessRate > SCORE_THRESHOLDS.VERY_SAFE_SUCCESS_RATE ? SCORE_BONUSES.VERY_SAFE : (totalSuccessRate > SCORE_THRESHOLDS.SAFE_SUCCESS_RATE ? SCORE_BONUSES.SAFE : 0);
+    details.failurePenalty = failureRate > SCORE_THRESHOLDS.HIGH_FAILURE_RATE ? (failureRate - SCORE_THRESHOLDS.HIGH_FAILURE_RATE) / 200 : 0;
+    details.sweetSpotBonus = (rewardIndex >= SCORE_THRESHOLDS.SWEET_SPOT_MIN_INDEX && rewardIndex <= SCORE_THRESHOLDS.SWEET_SPOT_MAX_INDEX && totalSuccessRate > SCORE_THRESHOLDS.SWEET_SPOT_MIN_SUCCESS) ? SCORE_BONUSES.SWEET_SPOT : 0;
 
-    if (details.sweetSpotBonus > 0) details.positives.push('Zone optimale (index 4-7)');
-    if (failureRate > 60) details.issues.push(`Échec probable (> ${failureRate.toFixed(0)}%)`);
+    if (details.sweetSpotBonus > 0) details.positives.push(`Zone optimale (index ${SCORE_THRESHOLDS.SWEET_SPOT_MIN_INDEX}-${SCORE_THRESHOLDS.SWEET_SPOT_MAX_INDEX})`);
+    if (failureRate > SCORE_THRESHOLDS.CRITICAL_FAILURE_RATE) details.issues.push(`Échec probable (> ${failureRate.toFixed(0)}%)`);
 
     const finalScore = Math.max(0, Math.min(1, baseScore + details.safetyBonus + details.sweetSpotBonus + details.talismanBonus - details.failurePenalty));
 
     return { score: finalScore, details };
 }
 
+const SCORE_LABELS = {
+    EXCELLENT: { threshold: 0.8, label: 'Excellente', color: 'var(--success)', emoji: '🌟' },
+    GOOD: { threshold: 0.6, label: 'Bonne', color: '#22c55e', emoji: '✅' },
+    FAIR: { threshold: 0.4, label: 'Correcte', color: 'var(--warning)', emoji: '👍' },
+    POOR: { threshold: 0.2, label: 'Médiocre', color: '#f97316', emoji: '⚠️' },
+    BAD: { threshold: 0, label: 'Mauvaise', color: 'var(--danger)', emoji: '❌' }
+};
+
 function getScoreLabel(score) {
-    if (score >= 0.8) return { label: 'Excellente', color: 'var(--success)', emoji: '🌟' };
-    if (score >= 0.6) return { label: 'Bonne', color: '#22c55e', emoji: '✅' };
-    if (score >= 0.4) return { label: 'Correcte', color: 'var(--warning)', emoji: '👍' };
-    if (score >= 0.2) return { label: 'Médiocre', color: '#f97316', emoji: '⚠️' };
-    return { label: 'Mauvaise', color: 'var(--danger)', emoji: '❌' };
+    if (score >= SCORE_LABELS.EXCELLENT.threshold) return SCORE_LABELS.EXCELLENT;
+    if (score >= SCORE_LABELS.GOOD.threshold) return SCORE_LABELS.GOOD;
+    if (score >= SCORE_LABELS.FAIR.threshold) return SCORE_LABELS.FAIR;
+    if (score >= SCORE_LABELS.POOR.threshold) return SCORE_LABELS.POOR;
+    return SCORE_LABELS.BAD;
 }
 
 function generateScoreExplanation(score, details) {
     const { label } = getScoreLabel(score);
-    if (score >= 0.8) {
+    if (score >= SCORE_LABELS.EXCELLENT.threshold) {
         return `Expédition optimale ! ${details.positives.join(', ') || 'Excellent équilibre risque/récompense.'}`;
     }
-    if (score >= 0.6) {
+    if (score >= SCORE_LABELS.GOOD.threshold) {
         const warning = details.issues.length ? ` Attention : ${details.issues[0].toLowerCase()}.` : '';
         return `Bon choix. ${(details.positives[0] || 'Équilibre correct.')} ${warning}`.trim();
     }
-    if (score >= 0.4) {
+    if (score >= SCORE_LABELS.FAIR.threshold) {
         const issues = details.issues.length ? details.issues.join(', ') : 'Ratio risque/récompense moyen';
         return `Acceptable mais perfectible. ${issues}.`;
     }
-    if (score >= 0.2) {
+    if (score >= SCORE_LABELS.POOR.threshold) {
         const issues = details.issues.length ? details.issues.join(', ') : 'Mauvais ratio risque/récompense';
         return `Déconseillée. ${issues}.`;
     }

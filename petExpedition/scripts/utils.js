@@ -25,3 +25,43 @@ export function calculateLinearScore(value, min, max) {
     const percentage = (value - min) / (max - min);
     return getIntervalValue(0, 3, percentage);
 }
+
+/**
+ * Échappe les caractères HTML pour prévenir les injections XSS
+ * @param {string} str - Chaîne à échapper
+ * @returns {string} Chaîne échappée
+ */
+export function escapeHTML(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Définit du contenu HTML de manière sécurisée
+ * @param {HTMLElement} container - Élément conteneur
+ * @param {string} htmlString - HTML à insérer
+ * @param {Object} options - Options { escapeValues: boolean }
+ */
+export function safeSetHTML(container, htmlString, { escapeValues = false } = {}) {
+    if (escapeValues) {
+        container.textContent = htmlString;
+    } else {
+        container.innerHTML = htmlString;
+    }
+}
+
+/**
+ * Normalise une chaîne en supprimant les accents pour faciliter la recherche
+ * @param {string} str - Chaîne à normaliser
+ * @returns {string} Chaîne normalisée sans accents
+ */
+export function normalizeString(str) {
+    return String(str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}

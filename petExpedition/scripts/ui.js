@@ -1,7 +1,7 @@
 // ui.js - Gestion des interactions d'interface
 import { getPets, getPetById } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES } from './constants.js';
-import { formatDuration, getCategoryName } from './utils.js';
+import { formatDuration, getCategoryName, escapeHTML, normalizeString } from './utils.js';
 
 let dropdownCloseHandlerRegistered = false;
 
@@ -16,8 +16,8 @@ function ensureDropdownCloseHandler() {
 }
 
 function renderDropdownItems(dropdown, filter) {
-    const normalizedFilter = filter?.toLowerCase() || '';
-    const pets = getPets().filter(pet => pet.name.toLowerCase().includes(normalizedFilter));
+    const normalizedFilter = normalizeString(filter || '');
+    const pets = getPets().filter(pet => normalizeString(pet.name).includes(normalizedFilter));
     dropdown.innerHTML = pets.map(pet => `
         <div class="dropdown-item" data-pet-id="${pet.id}">
             <span class="pet-name">${pet.name}</span>
@@ -65,13 +65,13 @@ export function initAnalyzerPetDropdown() {
     setupPetDropdown('analyzerPetSearch', 'analyzerPetDropdown', selectAnalyzerPet);
 }
 
-export function selectPet(petId) {
+function selectPetGeneric(petId, searchInputId, hiddenInputId, statsDivId) {
     const pet = getPetById(petId);
     if (!pet) return;
 
-    const searchInput = document.getElementById('petSearch');
-    const hiddenInput = document.getElementById('selectedPetId');
-    const statsDiv = document.getElementById('selectedPetStats');
+    const searchInput = document.getElementById(searchInputId);
+    const hiddenInput = document.getElementById(hiddenInputId);
+    const statsDiv = document.getElementById(statsDivId);
 
     if (searchInput) searchInput.value = pet.name;
     if (hiddenInput) hiddenInput.value = String(petId);
@@ -79,30 +79,18 @@ export function selectPet(petId) {
         statsDiv.style.display = 'flex';
         statsDiv.innerHTML = `
             <div class="stat-item">Rareté: <span class="rarity-badge rarity-${pet.rarity}">${RARITY_NAMES[pet.rarity]}</span></div>
-            <div class="stat-item">Force: <span>${pet.force}</span></div>
-            <div class="stat-item">Vitesse: <span>${pet.speed}</span></div>
+            <div class="stat-item">Force: <span>${escapeHTML(pet.force)}</span></div>
+            <div class="stat-item">Vitesse: <span>${escapeHTML(pet.speed)}</span></div>
         `;
     }
 }
 
+export function selectPet(petId) {
+    selectPetGeneric(petId, 'petSearch', 'selectedPetId', 'selectedPetStats');
+}
+
 export function selectAnalyzerPet(petId) {
-    const pet = getPetById(petId);
-    if (!pet) return;
-
-    const searchInput = document.getElementById('analyzerPetSearch');
-    const hiddenInput = document.getElementById('analyzerSelectedPetId');
-    const statsDiv = document.getElementById('analyzerSelectedPetStats');
-
-    if (searchInput) searchInput.value = pet.name;
-    if (hiddenInput) hiddenInput.value = String(petId);
-    if (statsDiv) {
-        statsDiv.style.display = 'flex';
-        statsDiv.innerHTML = `
-            <div class="stat-item">Rareté: <span class="rarity-badge rarity-${pet.rarity}">${RARITY_NAMES[pet.rarity]}</span></div>
-            <div class="stat-item">Force: <span>${pet.force}</span></div>
-            <div class="stat-item">Vitesse: <span>${pet.speed}</span></div>
-        `;
-    }
+    selectPetGeneric(petId, 'analyzerPetSearch', 'analyzerSelectedPetId', 'analyzerSelectedPetStats');
 }
 
 export function initSliders() {

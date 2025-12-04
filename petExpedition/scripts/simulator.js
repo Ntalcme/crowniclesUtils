@@ -1,7 +1,7 @@
 // simulator.js - Logique du simulateur d'expédition
 import { getPetById } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES } from './constants.js';
-import { formatDuration, getCategoryName } from './utils.js';
+import { formatDuration, getCategoryName, escapeHTML } from './utils.js';
 import {
     calculateRewardIndex,
     calculateEffectiveRisk,
@@ -21,15 +21,15 @@ export function simulateExpedition() {
     const pet = getPetById(petId);
 
     if (!pet) {
-        alert('Veuillez sélectionner un familier.');
+        showToast('⚠️ Veuillez sélectionner un familier');
         return;
     }
 
-    const lovePoints = parseInt(document.getElementById('lovePoints').value, 10);
-    const baseDuration = parseInt(document.getElementById('duration').value, 10);
-    const riskRate = parseInt(document.getElementById('riskRate').value, 10);
-    const difficulty = parseInt(document.getElementById('difficulty').value, 10);
-    const wealthRate = parseInt(document.getElementById('wealthRate').value, 10) / 100;
+    const lovePoints = Math.max(80, Math.min(110, parseInt(document.getElementById('lovePoints').value, 10)));
+    const baseDuration = Math.max(10, Math.min(4320, parseInt(document.getElementById('duration').value, 10)));
+    const riskRate = Math.max(0, Math.min(100, parseInt(document.getElementById('riskRate').value, 10)));
+    const difficulty = Math.max(0, Math.min(100, parseInt(document.getElementById('difficulty').value, 10)));
+    const wealthRate = Math.max(0, Math.min(200, parseInt(document.getElementById('wealthRate').value, 10))) / 100;
     const locationType = getSelectedLocation();
     const hasCloneTalisman = document.getElementById('hasCloneTalisman').checked;
     const hasTalismanBonus = document.getElementById('hasTalismanBonus').checked;
@@ -102,23 +102,24 @@ function displayResults(data) {
     const resultsDiv = document.getElementById('results');
     if (!resultsDiv) return;
 
+    resultsDiv.style.display = 'block';
     resultsDiv.classList.add('show');
 
     const summaryBody = document.querySelector('#summaryTable tbody');
     if (summaryBody) {
         summaryBody.innerHTML = `
-            <tr><td>🐾 Familier</td><td>${data.pet.name} (Force: ${data.pet.force}, Vitesse: ${data.pet.speed})</td></tr>
-            <tr><td>💕 Points d'amour</td><td>${data.lovePoints}</td></tr>
+            <tr><td>🐾 Familier</td><td>${escapeHTML(data.pet.name)} (Force: ${escapeHTML(data.pet.force)}, Vitesse: ${escapeHTML(data.pet.speed)})</td></tr>
+            <tr><td>💕 Points d'amour</td><td>${escapeHTML(data.lovePoints)}</td></tr>
             <tr><td>⏱️ Durée de base</td><td>${formatDuration(data.baseDuration)}</td></tr>
             <tr><td>🚀 Modificateur de vitesse</td><td>x${data.speedModifier.toFixed(2)} (${data.speedModifier < 1 ? '-' : '+'}${Math.abs(Math.round((1 - data.speedModifier) * 100))}%)</td></tr>
             <tr><td>🕐 Durée effective</td><td>${formatDuration(data.effectiveDuration)}</td></tr>
-            <tr><td>🗺️ Type d'expédition</td><td>${EXPEDITION_CONSTANTS.LOCATION_EMOJIS[data.locationType]} ${LOCATION_NAMES[data.locationType]}</td></tr>
-            <tr><td>⚠️ Dangerosité initiale</td><td>${data.riskRate}% (${getCategoryName(data.riskRate, EXPEDITION_CONSTANTS.RISK_CATEGORIES)})</td></tr>
-            <tr><td>🎯 Difficulté</td><td>${data.difficulty} (${getCategoryName(data.difficulty, EXPEDITION_CONSTANTS.DIFFICULTY_CATEGORIES)})</td></tr>
+            <tr><td>🗺️ Type d'expédition</td><td>${EXPEDITION_CONSTANTS.LOCATION_EMOJIS[data.locationType]} ${escapeHTML(LOCATION_NAMES[data.locationType])}</td></tr>
+            <tr><td>⚠️ Dangerosité initiale</td><td>${escapeHTML(data.riskRate)}% (${getCategoryName(data.riskRate, EXPEDITION_CONSTANTS.RISK_CATEGORIES)})</td></tr>
+            <tr><td>🎯 Difficulté</td><td>${escapeHTML(data.difficulty)} (${getCategoryName(data.difficulty, EXPEDITION_CONSTANTS.DIFFICULTY_CATEGORIES)})</td></tr>
             <tr><td>💎 Taux de richesse</td><td>${data.wealthRate.toFixed(2)} (${getCategoryName(data.wealthRate, EXPEDITION_CONSTANTS.WEALTH_CATEGORIES)})</td></tr>
-            <tr><td>🍖 Rations requises</td><td>${data.foodRequired} ${data.hasEnoughFood ? '✅' : '❌ (risque x3)'}</td></tr>
+            <tr><td>🍖 Rations requises</td><td>${escapeHTML(data.foodRequired)} ${data.hasEnoughFood ? '✅' : '❌ (risque x3)'}</td></tr>
             <tr><td>📊 Risque effectif</td><td>${data.effectiveRisk.toFixed(1)}%</td></tr>
-            <tr><td>⭐ Index de récompense</td><td>${data.rewardIndex}/9 (${describeRewardCategory(data.rewardIndex)})</td></tr>
+            <tr><td>⭐ Index de récompense</td><td>${escapeHTML(data.rewardIndex)}/9 (${describeRewardCategory(data.rewardIndex)})</td></tr>
             <tr><td>🧬 Bonus talisman</td><td>${data.hasTalismanBonus ? '✅ Oui (x10)' : '❌ Non'}</td></tr>
         `;
     }
