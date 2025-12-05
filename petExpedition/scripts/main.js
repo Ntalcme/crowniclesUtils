@@ -4,6 +4,7 @@ import {
     initAnalyzerPetDropdown,
     initSliders,
     initAnalyzerSliders,
+    initBranchSelect,
     showToast
 } from './ui.js';
 import { escapeHTML } from './utils.js';
@@ -58,12 +59,12 @@ function activateTab(target) {
 }
 
 async function handleLoadData() {
-    const branchSelect = document.getElementById('branchSelect');
+    const branchInput = document.getElementById('selectedBranch');
     const loadButton = document.getElementById('loadButton');
     const statusDiv = document.getElementById('loadingStatus');
-    if (!branchSelect || !loadButton || !statusDiv) return;
+    if (!branchInput || !loadButton || !statusDiv) return;
 
-    const branch = branchSelect.value;
+    const branch = branchInput.value;
     loadButton.disabled = true;
     const originalText = loadButton.textContent;
     loadButton.textContent = '⏳ Chargement...';
@@ -102,6 +103,7 @@ async function bootstrap() {
         return;
     }
 
+    await initBranchSelect();
     initSliders();
     initAnalyzerSliders();
     initPetDropdown();

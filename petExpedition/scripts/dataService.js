@@ -3,6 +3,8 @@ import { setPets, setTranslations } from './state.js';
 
 const CACHE_KEY = 'crownicles_pets_cache';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const BRANCHES_CACHE_KEY = 'crownicles_branches_cache';
+const BRANCHES_CACHE_DURATION = 60 * 60 * 1000; // 1 heure
 
 async function fetchJson(url, errorMessage) {
     const response = await fetch(url);
@@ -10,6 +12,40 @@ async function fetchJson(url, errorMessage) {
         throw new Error(errorMessage || `Impossible de charger ${url}`);
     }
     return response.json();
+}
+
+export async function fetchGitHubBranches() {
+    // Vérifier le cache
+    const cached = localStorage.getItem(BRANCHES_CACHE_KEY);
+    if (cached) {
+        try {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < BRANCHES_CACHE_DURATION) {
+                console.log('✅ Branches chargées depuis le cache');
+                return data;
+            }
+        } catch (e) {
+            console.warn('Cache des branches corrompu, rechargement...', e);
+            localStorage.removeItem(BRANCHES_CACHE_KEY);
+        }
+    }
+
+    const branchesUrl = 'https://api.github.com/repos/Crownicles/Crownicles/branches';
+    const branches = await fetchJson(branchesUrl, 'Impossible de charger les branches');
+    const branchNames = branches.map(branch => branch.name).sort();
+
+    // Sauvegarder dans le cache
+    try {
+        localStorage.setItem(BRANCHES_CACHE_KEY, JSON.stringify({
+            data: branchNames,
+            timestamp: Date.now()
+        }));
+        console.log('✅ Branches mises en cache');
+    } catch (e) {
+        console.warn('Impossible de sauvegarder le cache des branches', e);
+    }
+
+    return branchNames;
 }
 
 export async function fetchPetData(branch) {

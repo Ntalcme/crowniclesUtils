@@ -2,11 +2,11 @@
     <h2>📦 Chargement des données</h2>
     <div class="form-group">
         <label>Branche GitHub</label>
-        <select id="branchSelect">
-            <option value="master">master</option>
-            <option value="petexploration" selected>petexploration</option>
-            <option value="develop">develop</option>
-        </select>
+        <div class="searchable-select-container">
+            <input type="text" id="branchSearch" placeholder="Rechercher une branche..." autocomplete="off">
+            <div class="dropdown-list" id="branchDropdown"></div>
+        </div>
+        <input type="hidden" id="selectedBranch" value="petexploration">
     </div>
     <button class="btn-simulate" id="loadButton">🔄 Charger les données des familiers</button>
     <div id="loadingStatus" style="margin-top: 15px; text-align: center;"></div>

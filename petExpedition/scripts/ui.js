@@ -2,6 +2,7 @@
 import { getPets, getPetById } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML, normalizeString } from './utils.js';
+import { fetchGitHubBranches } from './dataService.js';
 
 let dropdownCloseHandlerRegistered = false;
 
@@ -197,6 +198,76 @@ export function updateLocationInfo(location) {
 export function getSelectedLocation() {
     const selected = document.querySelector('.location-option.selected');
     return selected ? selected.dataset.location : 'plains';
+}
+
+let cachedBranches = [];
+
+function renderBranchDropdownItems(dropdown, filter) {
+    const normalizedFilter = normalizeString(filter || '');
+    const branches = cachedBranches.filter(branch => normalizeString(branch).includes(normalizedFilter));
+    dropdown.innerHTML = branches.map(branch => `
+        <div class="dropdown-item" data-branch="${escapeHTML(branch)}">
+            <span class="pet-name">${escapeHTML(branch)}</span>
+        </div>
+    `).join('');
+}
+
+function selectBranch(branchName) {
+    const searchInput = document.getElementById('branchSearch');
+    const hiddenInput = document.getElementById('selectedBranch');
+    
+    if (searchInput) searchInput.value = branchName;
+    if (hiddenInput) hiddenInput.value = branchName;
+}
+
+export async function initBranchSelect() {
+    const searchInput = document.getElementById('branchSearch');
+    const dropdown = document.getElementById('branchDropdown');
+    const hiddenInput = document.getElementById('selectedBranch');
+    
+    if (!searchInput || !dropdown) return;
+
+    ensureDropdownCloseHandler();
+
+    try {
+        cachedBranches = await fetchGitHubBranches();
+        
+        // Définir la branche par défaut
+        const defaultBranch = 'petexploration';
+        if (cachedBranches.includes(defaultBranch)) {
+            selectBranch(defaultBranch);
+        } else if (cachedBranches.length > 0) {
+            selectBranch(cachedBranches[0]);
+        }
+        
+        console.log(`✅ ${cachedBranches.length} branches chargées`);
+    } catch (error) {
+        console.error('Erreur lors du chargement des branches:', error);
+        showToast('⚠️ Impossible de charger les branches depuis GitHub');
+        // Fallback sur quelques branches communes
+        cachedBranches = ['master', 'petexploration', 'develop'];
+        selectBranch('petexploration');
+    }
+
+    const render = (filter = '') => renderBranchDropdownItems(dropdown, filter);
+
+    searchInput.addEventListener('focus', () => {
+        render('');
+        dropdown.classList.add('show');
+    });
+
+    searchInput.addEventListener('input', (event) => {
+        render(event.target.value);
+        dropdown.classList.add('show');
+    });
+
+    dropdown.addEventListener('click', (event) => {
+        const item = event.target.closest('.dropdown-item');
+        if (!item) return;
+        const branchName = item.dataset.branch;
+        selectBranch(branchName);
+        dropdown.classList.remove('show');
+    });
 }
 
 export function showToast(message = '✅ Résultats calculés !') {
