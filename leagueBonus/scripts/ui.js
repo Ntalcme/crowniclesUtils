@@ -103,9 +103,6 @@ export function displayResults(data) {
             <div style="max-width: 500px; margin: 0 auto;">
                 ${raritiesHTML}
             </div>
-            <p style="font-size: 0.85em; color: var(--text-secondary); text-align: center; margin-top: 15px;">
-                La probabilité est équitablement répartie entre les raretés disponibles
-            </p>
         `;
     }
 
