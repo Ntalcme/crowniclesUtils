@@ -9,6 +9,12 @@ export function showToast(message) {
     const toast = document.getElementById('toast');
     if (!toast) return;
 
+    // Retirer la classe show si elle existe déjà (pour réinitialiser l'animation)
+    toast.classList.remove('show');
+    
+    // Force un reflow pour que l'animation redémarre
+    void toast.offsetWidth;
+    
     toast.textContent = message;
     toast.classList.add('show');
 
