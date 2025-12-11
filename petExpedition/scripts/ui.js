@@ -153,6 +153,7 @@ export function initSliders() {
     }
 
     initLocationGrid();
+    initBonusExclusivity();
 }
 
 export function initAnalyzerSliders() {
@@ -179,6 +180,29 @@ export function initLocationGrid() {
     });
 
     updateLocationInfo(getSelectedLocation());
+}
+
+/**
+ * Gère l'exclusivité mutuelle entre bonus talisman et bonus tokens
+ * (Un seul bonus peut être actif à la fois sur une expédition)
+ */
+export function initBonusExclusivity() {
+    const talismanBonus = document.getElementById('hasTalismanBonus');
+    const tokenBonus = document.getElementById('hasTokenBonus');
+    
+    if (!talismanBonus || !tokenBonus) return;
+    
+    talismanBonus.addEventListener('change', () => {
+        if (talismanBonus.checked) {
+            tokenBonus.checked = false;
+        }
+    });
+    
+    tokenBonus.addEventListener('change', () => {
+        if (tokenBonus.checked) {
+            talismanBonus.checked = false;
+        }
+    });
 }
 
 export function updateLocationInfo(location) {

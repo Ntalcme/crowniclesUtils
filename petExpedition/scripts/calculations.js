@@ -3,11 +3,17 @@ import { EXPEDITION_CONSTANTS } from './constants.js';
 import { calculateLinearScore, getCategoryName } from './utils.js';
 
 // Constantes pour le calcul du score de rentabilité
+// Le score mesure la RENTABILITÉ GLOBALE de l'expédition
+// Une expé avec bon taux de succès et récompenses décentes = rentable
+// Les bonus (talisman, tokens) AUGMENTENT le score mais ne le dominent pas
 const SCORE_WEIGHTS = {
-    REWARD: 0.35,
-    SUCCESS: 0.35,
-    TIME_EFFICIENCY: 0.15,
-    TALISMAN: 0.15
+    // Base de rentabilité (70% du score)
+    SUCCESS: 0.35,         // Taux de succès = fondamental
+    REWARDS: 0.35,         // Index de récompense = fondamental
+    // Bonus additionnels (30% du score)
+    TALISMAN: 0.15,        // Bonus si chance de talisman
+    TOKENS: 0.10,          // Bonus si tokens significatifs
+    TIME_EFFICIENCY: 0.05  // Efficacité temps
 };
 
 const SCORE_THRESHOLDS = {
@@ -18,7 +24,7 @@ const SCORE_THRESHOLDS = {
     VERY_LONG_DURATION: 2880,
     SHORT_DURATION: 60,
     SHORT_DURATION_MIN_REWARD: 3,
-    HIGH_TALISMAN_CHANCE: 20,
+    HIGH_TALISMAN_CHANCE: 15,
     NOTABLE_TALISMAN_CHANCE: 5,
     VERY_SAFE_SUCCESS_RATE: 95,
     SAFE_SUCCESS_RATE: 85,
@@ -26,15 +32,21 @@ const SCORE_THRESHOLDS = {
     CRITICAL_FAILURE_RATE: 60,
     SWEET_SPOT_MIN_INDEX: 4,
     SWEET_SPOT_MAX_INDEX: 7,
-    SWEET_SPOT_MIN_SUCCESS: 70
+    SWEET_SPOT_MIN_SUCCESS: 70,
+    // Seuils pour tokens
+    HIGH_TOKENS: 6,
+    LOW_TOKENS: 2
 };
 
 const SCORE_BONUSES = {
-    VERY_SAFE: 0.08,
-    SAFE: 0.04,
-    SWEET_SPOT: 0.05,
-    TALISMAN_BONUS_MULTIPLIER: 1.5,
-    MAX_TALISMAN_BONUS: 0.1
+    VERY_SAFE: 0.05,
+    SAFE: 0.02,
+    SWEET_SPOT: 0.05,                // Augmenté de 3% à 5%
+    VERY_SHORT_EFFICIENT: 0.08,      // Bonus pour expé très courte (<15min) avec bon index
+    SHORT_EFFICIENT: 0.05,           // Bonus pour expé courte (<60min) avec bon index
+    TALISMAN_BONUS_MULTIPLIER: 2.0,
+    TOKEN_BONUS_MULTIPLIER: 1.5,
+    MAX_TALISMAN_SCORE: 0.30
 };
 
 export function calculateRewardIndex(durationMinutes, riskRate, difficulty, wealthRate) {
@@ -83,12 +95,44 @@ export function calculateSpeedDurationModifier(petSpeed) {
     return speedConfig.BASE_MULTIPLIER - petSpeed * speedConfig.REDUCTION_PER_SPEED_POINT;
 }
 
-export function calculateRewards(rewardIndex, locationType) {
+export function calculateRewards(rewardIndex, locationType, durationMinutes = null, hasTokenBonus = false) {
     const weights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[locationType];
+    const tokensConfig = EXPEDITION_CONSTANTS.TOKENS.EXPEDITION;
+    const bonusTokensConfig = EXPEDITION_CONSTANTS.BONUS_TOKENS;
+    
+    // Calcul des tokens basé sur rewardIndex avec offset
+    let baseTokens = Math.max(0, rewardIndex + tokensConfig.REWARD_INDEX_OFFSET);
+    
+    // Malus si durée < 1h
+    if (durationMinutes !== null && durationMinutes < tokensConfig.SHORT_DURATION_THRESHOLD_MINUTES) {
+        baseTokens = Math.max(0, baseTokens - tokensConfig.SHORT_DURATION_MALUS);
+    }
+    
+    // Malus si rewardIndex = 0
+    if (rewardIndex === 0) {
+        baseTokens = Math.max(0, baseTokens - tokensConfig.LOW_REWARD_INDEX_MALUS);
+    }
+    
+    // Minimum garanti
+    let tokens = Math.max(bonusTokensConfig.MIN_TOKEN_REWARD, baseTokens);
+    
+    // Bonus multiplicateur x3 si expédition bonus tokens
+    if (hasTokenBonus) {
+        tokens = Math.max(bonusTokensConfig.MIN_BONUS_TOKEN_REWARD, tokens * bonusTokensConfig.MULTIPLIER);
+    }
+    
+    // Boost aléatoire moyen (pour estimation)
+    const avgRandomBoost = (bonusTokensConfig.RANDOM_BOOST_MIN + bonusTokensConfig.RANDOM_BOOST_MAX) / 2;
+    tokens += avgRandomBoost;
+    
+    // Application du poids de localisation
+    tokens = Math.round(tokens * (weights.tokens || 1));
+    
     return {
         money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * weights.money),
         experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * weights.experience),
-        points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * weights.points)
+        points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * weights.points),
+        tokens: tokens
     };
 }
 
@@ -110,6 +154,47 @@ export function calculateTalismanDropChance(rewardIndex, hasBonus) {
     return chance;
 }
 
+/**
+ * Calcule le nombre de tokens attendus pour une expédition
+ * @param {number} rewardIndex - Index de récompense (0-9)
+ * @param {number} durationMinutes - Durée de l'expédition en minutes
+ * @param {boolean} hasTokenBonus - Si l'expédition a le bonus tokens x3
+ * @returns {object} { min, max, expected } - Tokens attendus
+ */
+export function calculateExpectedTokens(rewardIndex, durationMinutes, hasTokenBonus = false) {
+    const tokensConfig = EXPEDITION_CONSTANTS.TOKENS.EXPEDITION;
+    const bonusConfig = EXPEDITION_CONSTANTS.BONUS_TOKENS;
+    
+    // Base: rewardIndex avec offset
+    let baseTokens = Math.max(0, rewardIndex + tokensConfig.REWARD_INDEX_OFFSET);
+    
+    // Malus durée courte (< 1h)
+    if (durationMinutes < tokensConfig.SHORT_DURATION_THRESHOLD_MINUTES) {
+        baseTokens = Math.max(0, baseTokens - tokensConfig.SHORT_DURATION_MALUS);
+    }
+    
+    // Malus rewardIndex 0
+    if (rewardIndex === 0) {
+        baseTokens = Math.max(0, baseTokens - tokensConfig.LOW_REWARD_INDEX_MALUS);
+    }
+    
+    // Minimum garanti
+    const minGuaranteed = hasTokenBonus ? bonusConfig.MIN_BONUS_TOKEN_REWARD : bonusConfig.MIN_TOKEN_REWARD;
+    let tokens = Math.max(minGuaranteed, baseTokens);
+    
+    // Multiplicateur bonus
+    if (hasTokenBonus) {
+        tokens *= bonusConfig.MULTIPLIER;
+    }
+    
+    return {
+        min: tokens + bonusConfig.RANDOM_BOOST_MIN,
+        max: tokens + bonusConfig.RANDOM_BOOST_MAX,
+        expected: tokens + (bonusConfig.RANDOM_BOOST_MIN + bonusConfig.RANDOM_BOOST_MAX) / 2,
+        hasBonus: hasTokenBonus
+    };
+}
+
 export function calculateProfitabilityScore(
     rewardIndex,
     totalSuccessRate,
@@ -118,13 +203,16 @@ export function calculateProfitabilityScore(
     effectiveDuration,
     rewards,
     talismanChance = 0,
-    hasTalismanBonus = false
+    hasTalismanBonus = false,
+    hasTokenBonus = false,
+    hasCloneTalisman = false
 ) {
     const details = {
-        rewardScore: 0,
         successScore: 0,
+        rewardScore: 0,
+        talismanScore: 0,
+        tokenScore: 0,
         timeEfficiency: 0,
-        talismanBonus: 0,
         safetyBonus: 0,
         sweetSpotBonus: 0,
         failurePenalty: 0,
@@ -132,45 +220,115 @@ export function calculateProfitabilityScore(
         positives: []
     };
 
+    // ========== 1. TAUX DE SUCCÈS (35% - fondamental) ==========
+    // Succès total = 100% de valeur, partiel = 50%
+    const effectiveSuccessRate = totalSuccessRate + (partialSuccessRate * 0.5);
+    details.successScore = effectiveSuccessRate / 100;
+    
+    if (totalSuccessRate >= SCORE_THRESHOLDS.EXCELLENT_SUCCESS_RATE) {
+        details.positives.push('Succès quasi-garanti');
+    } else if (totalSuccessRate < SCORE_THRESHOLDS.POOR_SUCCESS_RATE) {
+        details.issues.push('Risque d\'échec élevé');
+    }
+
+    // ========== 2. INDEX DE RÉCOMPENSE (35% - fondamental) ==========
+    // Index 0-9, normalisé. Index 3 = 33%, Index 5 = 55%, etc.
     details.rewardScore = (rewardIndex + 1) / 10;
-    if (rewardIndex >= SCORE_THRESHOLDS.HIGH_REWARD_INDEX) details.positives.push('Récompenses élevées');
-    else if (rewardIndex <= SCORE_THRESHOLDS.LOW_REWARD_INDEX) details.issues.push('Récompenses faibles');
+    
+    if (rewardIndex >= SCORE_THRESHOLDS.HIGH_REWARD_INDEX) {
+        details.positives.push('Récompenses élevées');
+    } else if (rewardIndex <= SCORE_THRESHOLDS.LOW_REWARD_INDEX) {
+        details.issues.push('Récompenses faibles');
+    }
 
-    details.successScore = (totalSuccessRate / 100) + (partialSuccessRate / 100) * 0.5;
-    if (totalSuccessRate >= SCORE_THRESHOLDS.EXCELLENT_SUCCESS_RATE) details.positives.push('Succès quasi-garanti');
-    else if (totalSuccessRate < SCORE_THRESHOLDS.POOR_SUCCESS_RATE) details.issues.push('Risque d\'échec élevé');
-
-    const expectedDurationForIndex = 10 + (rewardIndex * 450);
-    const durationRatio = expectedDurationForIndex / effectiveDuration;
-    const timeEfficiency = Math.min(1.2, Math.max(0.5, durationRatio));
-    details.timeEfficiency = (timeEfficiency - 0.5) / 0.7;
-    if (effectiveDuration > SCORE_THRESHOLDS.VERY_LONG_DURATION) details.issues.push('Expédition très longue');
-    else if (effectiveDuration <= SCORE_THRESHOLDS.SHORT_DURATION && rewardIndex >= SCORE_THRESHOLDS.SHORT_DURATION_MIN_REWARD) details.positives.push('Bon ratio temps/récompense');
-
-    if (talismanChance > 0) {
+    // ========== 3. BONUS TALISMAN (15% - bonus additionnel) ==========
+    if (!hasCloneTalisman && talismanChance > 0) {
         const effectiveTalismanChance = (talismanChance * totalSuccessRate) / 100;
-        details.talismanBonus = Math.min(SCORE_BONUSES.MAX_TALISMAN_BONUS, effectiveTalismanChance / 100);
-        if (hasTalismanBonus && effectiveTalismanChance > SCORE_THRESHOLDS.HIGH_TALISMAN_CHANCE) {
-            details.positives.push('Bonus talisman ×10 actif');
-            details.talismanBonus *= SCORE_BONUSES.TALISMAN_BONUS_MULTIPLIER;
-        } else if (effectiveTalismanChance > SCORE_THRESHOLDS.NOTABLE_TALISMAN_CHANCE) {
-            details.positives.push('Chance de talisman notable');
+        // Normaliser: 10% de chance effective = score max
+        details.talismanScore = Math.min(1, effectiveTalismanChance / 10);
+        
+        if (hasTalismanBonus) {
+            details.talismanScore = Math.min(1, details.talismanScore * 2);
+            details.positives.push('🧬 Bonus talisman ×10 actif !');
+        }
+        
+        if (effectiveTalismanChance >= SCORE_THRESHOLDS.HIGH_TALISMAN_CHANCE) {
+            details.positives.push(`Bonne chance talisman (${effectiveTalismanChance.toFixed(1)}%)`);
         }
     }
 
-    const baseScore = (details.rewardScore * SCORE_WEIGHTS.REWARD)
-        + (details.successScore * SCORE_WEIGHTS.SUCCESS)
-        + (details.timeEfficiency * SCORE_WEIGHTS.TIME_EFFICIENCY)
-        + (details.talismanBonus * SCORE_WEIGHTS.TALISMAN / SCORE_WEIGHTS.TALISMAN);
+    // ========== 4. BONUS TOKENS (10% - bonus additionnel) ==========
+    const tokenValue = rewards.tokens || 0;
+    // Normaliser: 8 tokens = score max
+    details.tokenScore = Math.min(1, tokenValue / 8);
+    
+    if (hasTokenBonus) {
+        details.tokenScore = Math.min(1, details.tokenScore * 1.5);
+        details.positives.push('🪙 Bonus tokens ×3 actif !');
+    }
+    
+    if (tokenValue >= SCORE_THRESHOLDS.HIGH_TOKENS) {
+        details.positives.push(`${tokenValue} tokens estimés`);
+    }
 
-    details.safetyBonus = totalSuccessRate > SCORE_THRESHOLDS.VERY_SAFE_SUCCESS_RATE ? SCORE_BONUSES.VERY_SAFE : (totalSuccessRate > SCORE_THRESHOLDS.SAFE_SUCCESS_RATE ? SCORE_BONUSES.SAFE : 0);
-    details.failurePenalty = failureRate > SCORE_THRESHOLDS.HIGH_FAILURE_RATE ? (failureRate - SCORE_THRESHOLDS.HIGH_FAILURE_RATE) / 200 : 0;
-    details.sweetSpotBonus = (rewardIndex >= SCORE_THRESHOLDS.SWEET_SPOT_MIN_INDEX && rewardIndex <= SCORE_THRESHOLDS.SWEET_SPOT_MAX_INDEX && totalSuccessRate > SCORE_THRESHOLDS.SWEET_SPOT_MIN_SUCCESS) ? SCORE_BONUSES.SWEET_SPOT : 0;
+    // ========== 5. EFFICACITÉ TEMPS (5%) ==========
+    // Meilleur ratio = récompenses élevées pour temps court
+    const rewardPerHour = (rewardIndex + 1) / (effectiveDuration / 60);
+    const maxRewardPerHour = 10 / 0.5; // Index 9 en 30 min
+    details.timeEfficiency = Math.min(1, rewardPerHour / maxRewardPerHour);
+    
+    if (effectiveDuration > SCORE_THRESHOLDS.VERY_LONG_DURATION) {
+        details.issues.push('Expédition très longue');
+    }
+    // Note: le message "Bon ratio" est ajouté dans la section bonus ci-dessous
 
-    if (details.sweetSpotBonus > 0) details.positives.push(`Zone optimale (index ${SCORE_THRESHOLDS.SWEET_SPOT_MIN_INDEX}-${SCORE_THRESHOLDS.SWEET_SPOT_MAX_INDEX})`);
-    if (failureRate > SCORE_THRESHOLDS.CRITICAL_FAILURE_RATE) details.issues.push(`Échec probable (> ${failureRate.toFixed(0)}%)`);
+    // ========== CALCUL DU SCORE FINAL ==========
+    let baseScore = 
+        (details.successScore * SCORE_WEIGHTS.SUCCESS) +
+        (details.rewardScore * SCORE_WEIGHTS.REWARDS) +
+        (details.talismanScore * SCORE_WEIGHTS.TALISMAN) +
+        (details.tokenScore * SCORE_WEIGHTS.TOKENS) +
+        (details.timeEfficiency * SCORE_WEIGHTS.TIME_EFFICIENCY);
 
-    const finalScore = Math.max(0, Math.min(1, baseScore + details.safetyBonus + details.sweetSpotBonus + details.talismanBonus - details.failurePenalty));
+    // ========== BONUS/MALUS ==========
+    details.safetyBonus = totalSuccessRate > SCORE_THRESHOLDS.VERY_SAFE_SUCCESS_RATE 
+        ? SCORE_BONUSES.VERY_SAFE 
+        : (totalSuccessRate > SCORE_THRESHOLDS.SAFE_SUCCESS_RATE ? SCORE_BONUSES.SAFE : 0);
+    
+    details.failurePenalty = failureRate > SCORE_THRESHOLDS.HIGH_FAILURE_RATE 
+        ? (failureRate - SCORE_THRESHOLDS.HIGH_FAILURE_RATE) / 200 
+        : 0;
+    
+    // Zone optimale (index 4-7 avec bon succès)
+    const isInSweetSpot = rewardIndex >= SCORE_THRESHOLDS.SWEET_SPOT_MIN_INDEX 
+        && rewardIndex <= SCORE_THRESHOLDS.SWEET_SPOT_MAX_INDEX 
+        && totalSuccessRate > SCORE_THRESHOLDS.SWEET_SPOT_MIN_SUCCESS;
+    details.sweetSpotBonus = isInSweetSpot ? SCORE_BONUSES.SWEET_SPOT : 0;
+
+    // Bonus efficacité temps : expé courte avec bon index = très rentable
+    details.timeBonus = 0;
+    if (rewardIndex >= 3 && totalSuccessRate > 70) {
+        if (effectiveDuration <= 15) {
+            // Très courte (<15min) avec index 3+ = excellent
+            details.timeBonus = SCORE_BONUSES.VERY_SHORT_EFFICIENT;
+            details.positives.push('⚡ Très efficace (courte durée, bonnes récompenses)');
+        } else if (effectiveDuration <= 60) {
+            // Courte (<1h) avec index 3+ = bon
+            details.timeBonus = SCORE_BONUSES.SHORT_EFFICIENT;
+            details.positives.push('Bon ratio temps/récompense');
+        }
+    }
+
+    if (details.sweetSpotBonus > 0) {
+        details.positives.push(`Zone optimale (index ${rewardIndex})`);
+    }
+    if (failureRate > SCORE_THRESHOLDS.CRITICAL_FAILURE_RATE) {
+        details.issues.push(`Échec probable (${failureRate.toFixed(0)}%)`);
+    }
+
+    const finalScore = Math.max(0, Math.min(1, 
+        baseScore + details.safetyBonus + details.sweetSpotBonus + details.timeBonus - details.failurePenalty
+    ));
 
     return { score: finalScore, details };
 }

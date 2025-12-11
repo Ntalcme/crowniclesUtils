@@ -10,6 +10,7 @@ import {
     calculateItemRarityRange,
     calculateTalismanDropChance,
     calculateProfitabilityScore,
+    calculateExpectedTokens,
     formatScoreDisplay,
     describeRewardCategory
 } from './calculations.js';
@@ -33,6 +34,7 @@ export function simulateExpedition() {
     const locationType = getSelectedLocation();
     const hasCloneTalisman = document.getElementById('hasCloneTalisman').checked;
     const hasTalismanBonus = document.getElementById('hasTalismanBonus').checked;
+    const hasTokenBonus = document.getElementById('hasTokenBonus')?.checked ?? false;
     const hasEnoughFood = document.getElementById('hasEnoughFood').checked;
 
     const speedModifier = calculateSpeedDurationModifier(pet.speed);
@@ -42,12 +44,16 @@ export function simulateExpedition() {
     const foodConsumed = hasEnoughFood ? foodRequired : 0;
     const effectiveRisk = calculateEffectiveRisk(riskRate, difficulty, pet.force, lovePoints, foodConsumed, foodRequired);
 
-    const failureRate = Math.min(100, Math.max(0, effectiveRisk));
-    const successRate = 100 - failureRate;
-    const partialSuccessRate = (successRate * failureRate) / 100;
-    const totalSuccessRate = successRate - partialSuccessRate;
+    // Calcul selon Crownicles: 2 rolls successifs avec effectiveRisk%
+    // 1. Roll échec total (effectiveRisk%)
+    // 2. Si pas échec, roll succès partiel (effectiveRisk%)
+    const riskRatio = effectiveRisk / 100;
+    const failureRate = effectiveRisk; // P(échec) = R
+    const partialSuccessRate = (1 - riskRatio) * riskRatio * 100; // P(partiel) = (1-R) × R
+    const totalSuccessRate = Math.pow(1 - riskRatio, 2) * 100; // P(total) = (1-R)²
 
-    const rewards = calculateRewards(rewardIndex, locationType);
+    const rewards = calculateRewards(rewardIndex, locationType, effectiveDuration, hasTokenBonus);
+    const expectedTokens = calculateExpectedTokens(rewardIndex, effectiveDuration, hasTokenBonus);
     const { minRarity, maxRarity } = calculateItemRarityRange(rewardIndex);
     const baseTalismanChance = calculateTalismanDropChance(rewardIndex, false);
     const bonusTalismanChance = calculateTalismanDropChance(rewardIndex, true);
@@ -63,7 +69,8 @@ export function simulateExpedition() {
         effectiveDuration,
         rewards,
         talismanChanceForScore,
-        hasTalismanBonus
+        hasTalismanBonus,
+        hasTokenBonus
     );
 
     displayResults({
@@ -84,10 +91,12 @@ export function simulateExpedition() {
         partialSuccessRate,
         totalSuccessRate,
         rewards,
+        expectedTokens,
         minRarity,
         maxRarity,
         hasCloneTalisman,
         hasTalismanBonus,
+        hasTokenBonus,
         baseTalismanChance,
         bonusTalismanChance,
         weightedTalismanChance,
@@ -121,6 +130,7 @@ function displayResults(data) {
             <tr><td>📊 Risque effectif</td><td>${data.effectiveRisk.toFixed(1)}%</td></tr>
             <tr><td>⭐ Index de récompense</td><td>${escapeHTML(data.rewardIndex)}/9 (${describeRewardCategory(data.rewardIndex)})</td></tr>
             <tr><td>🧬 Bonus talisman</td><td>${data.hasTalismanBonus ? '✅ Oui (x10)' : '❌ Non'}</td></tr>
+            <tr><td>🪙 Bonus tokens</td><td>${data.hasTokenBonus ? '✅ Oui (x3)' : '❌ Non'}</td></tr>
         `;
     }
 
@@ -156,7 +166,17 @@ function displayResults(data) {
             return `<span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 6px; font-weight: bold;">×${mult.toFixed(1)}</span>`;
         };
 
+        const tokenBonusBadge = data.hasTokenBonus 
+            ? '<span style="background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 6px; font-weight: bold;">×3</span>' 
+            : '';
+
         rewardsBody.innerHTML = `
+            <tr>
+                <td>🪙 Tokens ${tokenBonusBadge}</td>
+                <td class="multiplier-cell mult-full">${data.expectedTokens.min}-${data.expectedTokens.max}</td>
+                <td class="multiplier-cell mult-partial">${Math.ceil(data.expectedTokens.min / 2)}-${Math.ceil(data.expectedTokens.max / 2)}</td>
+                <td class="multiplier-cell mult-none">0</td>
+            </tr>
             <tr>
                 <td>🏅 Points ${formatMultiplierBadge(locationWeights.points)}</td>
                 <td class="multiplier-cell mult-full">${data.rewards.points}</td>

@@ -5,7 +5,7 @@ export const EXPEDITION_CONSTANTS = {
     DIFFICULTY: { MIN: 0, MAX: 100 },
     WEALTH_RATE: { MIN: 0, MAX: 2 },
     WEALTH_RATE_REWARD_INDEX_BONUS: 0.30,
-    EFFECTIVE_RISK_FORMULA: { DIFFICULTY_DIVISOR: 3, LOVE_DIVISOR: 10 },
+    EFFECTIVE_RISK_FORMULA: { DIFFICULTY_DIVISOR: 4, LOVE_DIVISOR: 10 },
     NO_FOOD_RISK_MULTIPLIER: 3,
     SPEED_DURATION_MODIFIER: {
         BASE_MULTIPLIER: 1.20,
@@ -20,7 +20,26 @@ export const EXPEDITION_CONSTANTS = {
     CLONE_TALISMAN: {
         BASE_DROP_CHANCE: 0.5,
         REWARD_INDEX_BONUS_PER_POINT: 0.5,
+        BONUS_EXPEDITION_CHANCE: 20,
         BONUS_EXPEDITION_MULTIPLIER: 10
+    },
+    BONUS_TOKENS: {
+        TOKEN_BONUS_EXPEDITION_CHANCE: 8,
+        MULTIPLIER: 3,
+        MIN_TOKEN_REWARD: 1,
+        MIN_BONUS_TOKEN_REWARD: 2,
+        RANDOM_BOOST_MIN: 0,
+        RANDOM_BOOST_MAX: 2
+    },
+    TOKENS: {
+        MAX: 20,
+        LEVEL_TO_UNLOCK: 5,
+        EXPEDITION: {
+            REWARD_INDEX_OFFSET: -1,
+            SHORT_DURATION_THRESHOLD_MINUTES: 60,
+            SHORT_DURATION_MALUS: 1,
+            LOW_REWARD_INDEX_MALUS: 1
+        }
     },
     ITEM_REWARD: {
         MIN_RARITY_OFFSET: 4,
@@ -69,14 +88,14 @@ export const EXPEDITION_CONSTANTS = {
     TOTAL_EXPEDITIONS_COUNT: 3,
     DURATION_DISPLAY_ROUNDING: 10,
     LOCATION_REWARD_WEIGHTS: {
-        forest: { money: 0.8, experience: 1.3, points: 0.9 },
-        mountain: { money: 1.9, experience: 1, points: 0.3 },
-        desert: { money: 0.6, experience: 0.4, points: 1.5 },
-        swamp: { money: 0.4, experience: 1, points: 1.6 },
-        ruins: { money: 1.7, experience: 1, points: 0.5 },
-        cave: { money: 2.2, experience: 0.5, points: 0.2 },
-        plains: { money: 1, experience: 1, points: 1 },
-        coast: { money: 1.2, experience: 0.7, points: 0.8 }
+        forest: { money: 0.8, experience: 1.3, points: 0.9, tokens: 1.0 },
+        mountain: { money: 1.9, experience: 1, points: 0.3, tokens: 0.8 },
+        desert: { money: 0.6, experience: 0.4, points: 1.5, tokens: 1.2 },
+        swamp: { money: 0.4, experience: 1, points: 1.6, tokens: 1.1 },
+        ruins: { money: 1.7, experience: 1, points: 0.5, tokens: 0.9 },
+        cave: { money: 2.2, experience: 0.5, points: 0.2, tokens: 0.7 },
+        plains: { money: 1, experience: 1, points: 1, tokens: 1.0 },
+        coast: { money: 1.2, experience: 0.7, points: 0.8, tokens: 1.0 }
     },
     LOCATION_EMOJIS: {
         forest: "🌲",

@@ -8,6 +8,7 @@ import {
     calculateRewards,
     calculateTalismanDropChance,
     calculateProfitabilityScore,
+    calculateExpectedTokens,
     formatScoreDisplay,
     calculateRewardIndex
 } from './calculations.js';
@@ -139,11 +140,14 @@ export function analyzeExpedition() {
             (difficultyRange.min + difficultyRange.max) / 2
         );
 
+        // Calcul selon Crownicles: 2 rolls successifs avec effectiveRisk%
+        // 1. Roll échec total (effectiveRisk%)
+        // 2. Si pas échec, roll succès partiel (effectiveRisk%)
         const calcRates = (effectiveRisk) => {
-            const failureRate = Math.min(100, Math.max(0, effectiveRisk));
-            const successRate = 100 - failureRate;
-            const partialSuccessRate = (successRate * failureRate) / 100;
-            const totalSuccessRate = successRate - partialSuccessRate;
+            const riskRatio = Math.min(100, Math.max(0, effectiveRisk)) / 100;
+            const failureRate = riskRatio * 100; // P(échec) = R
+            const partialSuccessRate = (1 - riskRatio) * riskRatio * 100; // P(partiel) = (1-R) × R
+            const totalSuccessRate = Math.pow(1 - riskRatio, 2) * 100; // P(total) = (1-R)²
             return { totalSuccessRate, partialSuccessRate, failureRate };
         };
 
@@ -182,9 +186,11 @@ export function analyzeExpedition() {
             ? calculateTalismanDropChance(rewardIndex, true)
             : calculateTalismanDropChance(rewardIndex, false);
 
-        const bestScore = calculateProfitabilityScore(rewardIndex, bestCase.totalSuccessRate, bestCase.partialSuccessRate, bestCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus);
-        const avgScore = calculateProfitabilityScore(rewardIndex, avgCase.totalSuccessRate, avgCase.partialSuccessRate, avgCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus);
-        const worstScore = calculateProfitabilityScore(rewardIndex, worstCase.totalSuccessRate, worstCase.partialSuccessRate, worstCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus);
+        // L'analyseur ne gère pas le bonus token pour le moment, on passe false
+        const hasTokenBonus = false;
+        const bestScore = calculateProfitabilityScore(rewardIndex, bestCase.totalSuccessRate, bestCase.partialSuccessRate, bestCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
+        const avgScore = calculateProfitabilityScore(rewardIndex, avgCase.totalSuccessRate, avgCase.partialSuccessRate, avgCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
+        const worstScore = calculateProfitabilityScore(rewardIndex, worstCase.totalSuccessRate, worstCase.partialSuccessRate, worstCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
 
         scoreDiv.innerHTML = `
             <div style="display: grid; gap: 15px;">
@@ -214,14 +220,17 @@ export function analyzeExpedition() {
             experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * locationWeights.experience),
             money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * locationWeights.money)
         };
+        const expectedTokens = calculateExpectedTokens(rewardIndex, durationMinutes, false);
+        const expectedTokensBonus = calculateExpectedTokens(rewardIndex, durationMinutes, true);
 
         rewardDiv.innerHTML = `
-            ${renderRewardsCard('✅ Succès total', exactRewards, locationWeights)}
+            ${renderRewardsCard('✅ Succès total', exactRewards, locationWeights, expectedTokens)}
             ${renderRewardsCard('⚠️ Succès partiel (÷2)', {
                 points: Math.round(exactRewards.points / 2),
                 experience: Math.round(exactRewards.experience / 2),
                 money: Math.round(exactRewards.money / 2)
-            }, locationWeights, true)}
+            }, locationWeights, { min: Math.ceil(expectedTokens.min / 2), max: Math.ceil(expectedTokens.max / 2) }, true)}
+            ${renderTokensCard(expectedTokens, expectedTokensBonus)}
             ${renderRarityCard(rewardIndex)}
             ${renderTalismanCard(rewardIndex, hasTalismanBonus)}
         `;
@@ -303,17 +312,26 @@ function renderScenario(title, riskLabel, diffLabel, effectiveRisk, rates, color
     `;
 }
 
-function renderRewardsCard(title, rewards, locationWeights, isPartial = false) {
+function renderRewardsCard(title, rewards, locationWeights, expectedTokens = null, isPartial = false) {
     const formatMultiplierBadge = (value) => {
         if (value > 1) return `<span class="multiplier-badge" style="background: var(--success) !important; color: #1a1a2e !important;">×${value}</span>`;
         if (value < 1) return `<span class="multiplier-badge" style="background: var(--danger) !important; color: white !important;">×${value}</span>`;
         return `<span class="multiplier-badge" style="background: var(--warning) !important; color: #1a1a2e !important;">×${value}</span>`;
     };
 
+    const tokensHtml = expectedTokens ? `
+        <div class="reward-range-item">
+            <div class="icon">🪙</div>
+            <div class="range">${expectedTokens.min}-${expectedTokens.max}</div>
+            <div class="label">Tokens</div>
+        </div>
+    ` : '';
+
     return `
         <div class="reward-range-card" style="${isPartial ? 'opacity: 0.8;' : ''}">
             <h4>${title}</h4>
             <div class="reward-range-grid">
+                ${tokensHtml}
                 <div class="reward-range-item">
                     <div class="icon">🏅</div>
                     <div class="range">${rewards.points}</div>
@@ -330,6 +348,27 @@ function renderRewardsCard(title, rewards, locationWeights, isPartial = false) {
                     <div class="label">Argent ${formatMultiplierBadge(locationWeights.money)}</div>
                 </div>
             </div>
+        </div>
+    `;
+}
+
+function renderTokensCard(expectedTokens, expectedTokensBonus) {
+    return `
+        <div class="reward-range-card">
+            <h4>🪙 Tokens estimés</h4>
+            <div class="reward-range-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="reward-range-item">
+                    <div class="range">${expectedTokens.min}-${expectedTokens.max}</div>
+                    <div class="label">Sans bonus</div>
+                </div>
+                <div class="reward-range-item" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; padding: 10px;">
+                    <div class="range" style="color: #8b5cf6;">${expectedTokensBonus.min}-${expectedTokensBonus.max}</div>
+                    <div class="label">Avec bonus ×3 <small>(1/8)</small></div>
+                </div>
+            </div>
+            <small style="color: var(--text-secondary); display: block; margin-top: 10px;">
+                Les tokens sont attribués uniquement en cas de succès (total ou partiel).
+            </small>
         </div>
     `;
 }
