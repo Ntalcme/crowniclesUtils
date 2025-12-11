@@ -110,6 +110,36 @@
                     Bonus: Argent ×1, XP ×1, Points ×1
                 </small>
             </div>
+            
+            <!-- Bonus de l'expédition -->
+            <div class="form-group full-width">
+                <label>⚡ Bonus de l'expédition</label>
+                <div class="bonus-toggles">
+                    <div class="form-group">
+                        <div class="toggle-container">
+                            <label class="toggle">
+                                <input type="checkbox" id="hasTalismanBonus">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">✨ Bonus talisman (×10)</span>
+                        </div>
+                        <small>Chance: 1/20 si pas le talisman</small>
+                    </div>
+                    <div class="form-group">
+                        <div class="toggle-container">
+                            <label class="toggle">
+                                <input type="checkbox" id="hasTokenBonus">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">🪙 Bonus tokens (×3)</span>
+                        </div>
+                        <small>Chance: 1/8</small>
+                    </div>
+                </div>
+                <small style="margin-top: 8px; display: block;">⚠️ Ces deux bonus sont mutuellement exclusifs</small>
+            </div>
+            
+            <!-- Options du joueur -->
             <div class="form-group">
                 <label>🧬 Talisman de clonage</label>
                 <div class="toggle-container">
@@ -117,30 +147,9 @@
                         <input type="checkbox" id="hasCloneTalisman">
                         <span class="toggle-slider"></span>
                     </label>
-                    <span class="toggle-label">Possède le talisman</span>
+                    <span class="toggle-label">Déjà obtenu</span>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>✨ Bonus talisman sur l'expédition</label>
-                <div class="toggle-container">
-                    <label class="toggle">
-                        <input type="checkbox" id="hasTalismanBonus">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Expédition avec bonus (x10)</span>
-                </div>
-                <small style="color: var(--text-secondary);">Chance: 1/20 si pas le talisman • Exclusif avec bonus tokens</small>
-            </div>
-            <div class="form-group">
-                <label>🪙 Bonus tokens sur l'expédition</label>
-                <div class="toggle-container">
-                    <label class="toggle">
-                        <input type="checkbox" id="hasTokenBonus">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="toggle-label">Expédition avec bonus tokens (x3)</span>
-                </div>
-                <small style="color: var(--text-secondary);">Chance: 1/8 • Exclusif avec bonus talisman</small>
+                <small>Si coché, le score ne priorise plus le talisman</small>
             </div>
             <div class="form-group">
                 <label>🍖 Rations suffisantes</label>
@@ -151,7 +160,7 @@
                     </label>
                     <span class="toggle-label">Assez de nourriture</span>
                 </div>
-                <small style="color: var(--text-secondary);">Sans rations: risque x3</small>
+                <small>Sans rations: risque ×3</small>
             </div>
         </div>
         <button class="btn-simulate" id="simulateButton">🚀 Simuler l'expédition</button>

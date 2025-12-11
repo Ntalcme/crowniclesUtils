@@ -187,22 +187,41 @@ export function initLocationGrid() {
  * (Un seul bonus peut être actif à la fois sur une expédition)
  */
 export function initBonusExclusivity() {
+    // Simulateur
     const talismanBonus = document.getElementById('hasTalismanBonus');
     const tokenBonus = document.getElementById('hasTokenBonus');
     
-    if (!talismanBonus || !tokenBonus) return;
+    if (talismanBonus && tokenBonus) {
+        talismanBonus.addEventListener('change', () => {
+            if (talismanBonus.checked) {
+                tokenBonus.checked = false;
+            }
+        });
+        
+        tokenBonus.addEventListener('change', () => {
+            if (tokenBonus.checked) {
+                talismanBonus.checked = false;
+            }
+        });
+    }
     
-    talismanBonus.addEventListener('change', () => {
-        if (talismanBonus.checked) {
-            tokenBonus.checked = false;
-        }
-    });
+    // Analyseur
+    const analyzerTalismanBonus = document.getElementById('analyzerTalismanBonus');
+    const analyzerTokenBonus = document.getElementById('analyzerTokenBonus');
     
-    tokenBonus.addEventListener('change', () => {
-        if (tokenBonus.checked) {
-            talismanBonus.checked = false;
-        }
-    });
+    if (analyzerTalismanBonus && analyzerTokenBonus) {
+        analyzerTalismanBonus.addEventListener('change', () => {
+            if (analyzerTalismanBonus.checked) {
+                analyzerTokenBonus.checked = false;
+            }
+        });
+        
+        analyzerTokenBonus.addEventListener('change', () => {
+            if (analyzerTokenBonus.checked) {
+                analyzerTalismanBonus.checked = false;
+            }
+        });
+    }
 }
 
 export function updateLocationInfo(location) {

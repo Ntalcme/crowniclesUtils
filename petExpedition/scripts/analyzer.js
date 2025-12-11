@@ -69,6 +69,7 @@ export function analyzeExpedition() {
     const durationStr = document.getElementById('analyzerDuration').value;
     const location = document.getElementById('analyzerLocation').value;
     const hasTalismanBonus = document.getElementById('analyzerTalismanBonus').checked;
+    const hasTokenBonus = document.getElementById('analyzerTokenBonus').checked;
 
     const riskRange = ANALYZER_RANGES.risk[riskKey];
     const difficultyRange = ANALYZER_RANGES.difficulty[difficultyKey];
@@ -179,15 +180,14 @@ export function analyzeExpedition() {
         const exactRewards = {
             points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * locationWeights.points),
             experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * locationWeights.experience),
-            money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * locationWeights.money)
+            money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * locationWeights.money),
+            tokens: calculateExpectedTokens(rewardIndex, durationMinutes, hasTokenBonus).expected
         };
 
         const talismanChance = hasTalismanBonus
             ? calculateTalismanDropChance(rewardIndex, true)
             : calculateTalismanDropChance(rewardIndex, false);
 
-        // L'analyseur ne gère pas le bonus token pour le moment, on passe false
-        const hasTokenBonus = false;
         const bestScore = calculateProfitabilityScore(rewardIndex, bestCase.totalSuccessRate, bestCase.partialSuccessRate, bestCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
         const avgScore = calculateProfitabilityScore(rewardIndex, avgCase.totalSuccessRate, avgCase.partialSuccessRate, avgCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
         const worstScore = calculateProfitabilityScore(rewardIndex, worstCase.totalSuccessRate, worstCase.partialSuccessRate, worstCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
