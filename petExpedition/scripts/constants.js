@@ -88,14 +88,14 @@ export const EXPEDITION_CONSTANTS = {
     TOTAL_EXPEDITIONS_COUNT: 3,
     DURATION_DISPLAY_ROUNDING: 10,
     LOCATION_REWARD_WEIGHTS: {
-        forest: { money: 0.8, experience: 1.3, points: 0.9, tokens: 1.0 },
-        mountain: { money: 1.9, experience: 1, points: 0.3, tokens: 0.8 },
-        desert: { money: 0.6, experience: 0.4, points: 1.5, tokens: 1.2 },
-        swamp: { money: 0.4, experience: 1, points: 1.6, tokens: 1.1 },
-        ruins: { money: 1.7, experience: 1, points: 0.5, tokens: 0.9 },
-        cave: { money: 2.2, experience: 0.5, points: 0.2, tokens: 0.7 },
-        plains: { money: 1, experience: 1, points: 1, tokens: 1.0 },
-        coast: { money: 1.2, experience: 0.7, points: 0.8, tokens: 1.0 }
+        forest: { money: 0.8, experience: 1.3, points: 0.9 },
+        mountain: { money: 1.9, experience: 1, points: 0.3 },
+        desert: { money: 0.6, experience: 0.4, points: 1.5 },
+        swamp: { money: 0.4, experience: 1, points: 1.6 },
+        ruins: { money: 1.7, experience: 1, points: 0.5 },
+        cave: { money: 2.2, experience: 0.5, points: 0.2 },
+        plains: { money: 1, experience: 1, points: 1 },
+        coast: { money: 1.2, experience: 0.7, points: 0.8 }
     },
     LOCATION_EMOJIS: {
         forest: "🌲",
@@ -149,12 +149,24 @@ export const RARITY_NAMES = [
 ];
 
 export const LOCATION_NAMES = {
-    plains: "Plaines",
+    plains: "Plaine",
     forest: "Forêt",
     mountain: "Montagne",
     desert: "Désert",
-    swamp: "Marécage",
+    swamp: "Marais",
     ruins: "Ruines",
-    cave: "Grotte",
+    cave: "Caverne",
     coast: "Côte"
+};
+
+// Descriptions des bonus par type de lieu
+export const LOCATION_DESCRIPTIONS = {
+    plains: "Zone équilibrée sans bonus particulier",
+    forest: "Bonus d'XP, moins d'argent",
+    mountain: "Bonus d'argent important, moins de points",
+    desert: "Bonus de points et tokens, moins d'argent et d'XP",
+    swamp: "Bonus de points, moins d'argent",
+    ruins: "Bonus d'argent, moyenne sur le reste",
+    cave: "Gros bonus d'argent, malus XP et points",
+    coast: "Léger bonus d'argent, équilibré"
 };

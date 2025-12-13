@@ -10,6 +10,7 @@ import {
     calculateProfitabilityScore,
     calculateExpectedTokens,
     formatScoreDisplay,
+    formatScoreExpandedFromScore,
     calculateRewardIndex
 } from './calculations.js';
 
@@ -67,7 +68,7 @@ export function analyzeExpedition() {
     const rewardKey = document.getElementById('analyzerReward').value;
     const foodIndex = Math.max(0, Math.min(9, parseInt(document.getElementById('analyzerFood').value, 10)));
     const durationStr = document.getElementById('analyzerDuration').value;
-    const location = document.getElementById('analyzerLocation').value;
+    const location = document.getElementById('analyzerSelectedExpeditionType').value || 'plains';
     const hasTalismanBonus = document.getElementById('analyzerTalismanBonus').checked;
     const hasTokenBonus = document.getElementById('analyzerTokenBonus').checked;
 
@@ -75,7 +76,7 @@ export function analyzeExpedition() {
     const difficultyRange = ANALYZER_RANGES.difficulty[difficultyKey];
     const rewardRange = ANALYZER_RANGES.reward[rewardKey];
     const durationMinutes = parseDuration(durationStr);
-    const locationWeights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[location];
+    const locationWeights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[location] || EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS.plains;
     const rewardIndex = foodIndex;
 
     const parameterDiv = document.getElementById('parameterRanges');
@@ -87,7 +88,7 @@ export function analyzeExpedition() {
                     <div class="label">🐾 Familier</div>
                     <div class="values">${escapeHTML(pet.name)}</div>
                     <div style="font-size: 0.85em; color: var(--text-secondary);">
-                        Force: ${escapeHTML(pet.force)} | Vitesse: ${escapeHTML(pet.speed)} | Amour: ${escapeHTML(lovePoints)}
+                        Force: ${String(pet.force)} | Vitesse: ${String(pet.speed)} | Amour: ${lovePoints}
                     </div>
                 </div>
                 ` : `
@@ -123,10 +124,11 @@ export function analyzeExpedition() {
         `;
     }
 
-    const probabilitiesDiv = document.getElementById('successProbabilities');
+    const scenariosDiv = document.getElementById('analyzerScenarios');
     const scoreDiv = document.getElementById('analyzerProfitabilityScore');
+    const scoreAvgDiv = document.getElementById('analyzerProfitabilityScoreAvg');
 
-    if (pet && probabilitiesDiv && scoreDiv) {
+    if (pet) {
         const calcEffectiveRisk = (risk, diff) => calculateEffectiveRisk(
             risk,
             diff,
@@ -159,23 +161,25 @@ export function analyzeExpedition() {
         const speedModifier = calculateSpeedDurationModifier(pet.speed);
         const effectiveDuration = Math.round(durationMinutes * speedModifier);
 
-        probabilitiesDiv.innerHTML = `
-            <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
-                <p><strong>🚀 Durée effective :</strong> ${formatDuration(effectiveDuration)}
-                   <span style="color: var(--text-secondary);">(vitesse ${escapeHTML(pet.speed)} → ×${speedModifier.toFixed(2)})</span>
-                </p>
-            </div>
-            <h4 style="margin-bottom: 15px;">Scénarios selon les valeurs exactes de risque/difficulté :</h4>
-            ${renderScenario('🌟 Meilleur cas', riskRange.min, difficultyRange.min, minEffectiveRisk, bestCase, 'var(--success)')}
-            ${renderScenario('📊 Cas moyen', ((riskRange.min + riskRange.max) / 2).toFixed(0), ((difficultyRange.min + difficultyRange.max) / 2).toFixed(0), avgEffectiveRisk, avgCase, 'var(--warning)')}
-            ${renderScenario('💀 Pire cas', riskRange.max, difficultyRange.max, maxEffectiveRisk, worstCase, 'var(--danger)')}
-            <div style="margin-top: 15px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9em;">
-                <strong>📐 Formule du risque effectif :</strong>
-                <p style="font-family: monospace; margin-top: 5px;">
-                    Risque effectif = Dangerosité + (Difficulté ÷ 3) - Force - (Amour ÷ 10)
-                </p>
-            </div>
-        `;
+        // Afficher les scénarios
+        if (scenariosDiv) {
+            scenariosDiv.innerHTML = `
+                <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px;">
+                    <p><strong>🚀 Durée effective :</strong> ${formatDuration(effectiveDuration)}
+                       <span style="color: var(--text-secondary);">(vitesse ${escapeHTML(String(pet.speed))} → ×${speedModifier.toFixed(2)})</span>
+                    </p>
+                </div>
+                ${renderScenario('🌟 Meilleur cas', riskRange.min, difficultyRange.min, minEffectiveRisk, bestCase, 'var(--success)')}
+                ${renderScenario('📊 Cas moyen', ((riskRange.min + riskRange.max) / 2).toFixed(0), ((difficultyRange.min + difficultyRange.max) / 2).toFixed(0), avgEffectiveRisk, avgCase, 'var(--warning)')}
+                ${renderScenario('💀 Pire cas', riskRange.max, difficultyRange.max, maxEffectiveRisk, worstCase, 'var(--danger)')}
+                <div style="margin-top: 15px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9em;">
+                    <strong>📐 Formule du risque effectif :</strong>
+                    <p style="font-family: monospace; margin-top: 5px;">
+                        Risque effectif = Dangerosité + (Difficulté ÷ 3) - Force - (Amour ÷ 10)
+                    </p>
+                </div>
+            `;
+        }
 
         const exactRewards = {
             points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * locationWeights.points),
@@ -192,22 +196,119 @@ export function analyzeExpedition() {
         const avgScore = calculateProfitabilityScore(rewardIndex, avgCase.totalSuccessRate, avgCase.partialSuccessRate, avgCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
         const worstScore = calculateProfitabilityScore(rewardIndex, worstCase.totalSuccessRate, worstCase.partialSuccessRate, worstCase.failureRate, effectiveDuration, exactRewards, talismanChance, hasTalismanBonus, hasTokenBonus);
 
-        scoreDiv.innerHTML = `
-            <div style="display: grid; gap: 15px;">
-                <div><p style="margin-bottom: 8px;"><strong>🌟 Meilleur cas :</strong></p>${formatScoreDisplay(bestScore)}</div>
-                <div><p style="margin-bottom: 8px;"><strong>📊 Cas moyen :</strong></p>${formatScoreDisplay(avgScore)}</div>
-                <div><p style="margin-bottom: 8px;"><strong>💀 Pire cas :</strong></p>${formatScoreDisplay(worstScore)}</div>
-            </div>
-        `;
-    } else if (probabilitiesDiv && scoreDiv) {
+        // Score moyen dans l'aperçu avec graphique étendu (comme le simulateur)
+        if (scoreAvgDiv) {
+            scoreAvgDiv.innerHTML = formatScoreExpandedFromScore(avgScore);
+        }
+
+        // Tous les scores par scénario
+        if (scoreDiv) {
+            scoreDiv.innerHTML = `
+                <div class="scenarios-scores-grid">
+                    <div class="scenario-score-item best">
+                        <span class="scenario-label">🌟 Meilleur cas</span>
+                        ${formatScoreDisplay(bestScore, false)}
+                    </div>
+                    <div class="scenario-score-item average">
+                        <span class="scenario-label">📊 Cas moyen</span>
+                        ${formatScoreDisplay(avgScore, false)}
+                    </div>
+                    <div class="scenario-score-item worst">
+                        <span class="scenario-label">💀 Pire cas</span>
+                        ${formatScoreDisplay(worstScore, false)}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Mettre à jour les barres de progression avec le cas moyen
+        const progressSuccess = document.getElementById('analyzerProgressSuccess');
+        const progressPartial = document.getElementById('analyzerProgressPartial');
+        const progressFailure = document.getElementById('analyzerProgressFailure');
+        
+        if (progressSuccess) progressSuccess.style.width = `${avgCase.totalSuccessRate}%`;
+        if (progressPartial) progressPartial.style.width = `${avgCase.partialSuccessRate}%`;
+        if (progressFailure) progressFailure.style.width = `${avgCase.failureRate}%`;
+        
+        // Mettre à jour la légende
+        const legendSuccess = document.getElementById('analyzerLegendSuccess');
+        const legendPartial = document.getElementById('analyzerLegendPartial');
+        const legendFailure = document.getElementById('analyzerLegendFailure');
+        
+        if (legendSuccess) legendSuccess.textContent = avgCase.totalSuccessRate.toFixed(1);
+        if (legendPartial) legendPartial.textContent = avgCase.partialSuccessRate.toFixed(1);
+        if (legendFailure) legendFailure.textContent = avgCase.failureRate.toFixed(1);
+        
+        // Mettre à jour le quick summary
+        const quickSummary = document.getElementById('analyzerQuickSummary');
+        if (quickSummary) {
+            const rating = avgCase.totalSuccessRate >= 70 ? '✅ Favorable' : avgCase.totalSuccessRate >= 40 ? '⚠️ Risqué' : '❌ Dangereux';
+            quickSummary.innerHTML = `
+                <span class="summary-item"><strong>🐾</strong> ${escapeHTML(pet.name)}</span>
+                <span class="summary-item"><strong>🎲</strong> ${avgCase.totalSuccessRate.toFixed(0)}% succès</span>
+                <span class="summary-item"><strong>📊</strong> ${rating}</span>
+            `;
+        }
+        
+        // Mettre à jour la pénalité d'annulation selon les points d'amour
+        const cancelLoveChange = document.getElementById('analyzerCancelLoveChange');
+        if (cancelLoveChange) {
+            const cancelPenalty = lovePoints > 80 ? Math.floor((lovePoints - 80) / 2) + 15 : 15;
+            cancelLoveChange.textContent = `-${cancelPenalty}`;
+        }
+        
+        // Mettre à jour le score display compact dans le header
+        const headerScoreDisplay = document.getElementById('analyzerScoreDisplay');
+        if (headerScoreDisplay) {
+            const scorePercent = Math.round(avgScore.score * 100);
+            const scoreClass = avgScore.score >= 0.8 ? 'excellent' : avgScore.score >= 0.6 ? 'good' : avgScore.score >= 0.4 ? 'average' : 'poor';
+            const scoreLabel = avgScore.score >= 0.8 ? '🌟 Excellente' : avgScore.score >= 0.6 ? '✅ Bonne' : avgScore.score >= 0.4 ? '👍 Correcte' : avgScore.score >= 0.2 ? '⚠️ Médiocre' : '❌ À éviter';
+            headerScoreDisplay.innerHTML = `
+                <div class="score-badge ${scoreClass}">
+                    <span class="score-value">${scorePercent}</span>
+                    <span class="score-label">/100</span>
+                </div>
+                <div class="score-rating">${scoreLabel}</div>
+            `;
+        }
+    } else {
+        // Pas de pet sélectionné
         const warningBlock = `
             <div style="padding: 20px; text-align: center; color: var(--warning); background: rgba(251, 191, 36, 0.1); border-radius: 8px;">
-                <p style="font-size: 1.2em;">⚠️ Sélectionnez un familier pour voir les probabilités</p>
-                <p style="margin-top: 10px; color: var(--text-secondary);">Les probabilités dépendent de la force du pet et des points d'amour.</p>
+                <p style="font-size: 1.1em;">⚠️ Sélectionnez un familier pour voir les probabilités</p>
+                <p style="margin-top: 8px; color: var(--text-secondary);">Les probabilités dépendent de la force du pet et des points d'amour.</p>
             </div>
         `;
-        probabilitiesDiv.innerHTML = warningBlock;
-        scoreDiv.innerHTML = warningBlock;
+        if (scenariosDiv) scenariosDiv.innerHTML = warningBlock;
+        if (scoreDiv) scoreDiv.innerHTML = warningBlock;
+        if (scoreAvgDiv) scoreAvgDiv.innerHTML = warningBlock;
+        
+        // Réinitialiser les barres de progression
+        const progressSuccess = document.getElementById('analyzerProgressSuccess');
+        const progressPartial = document.getElementById('analyzerProgressPartial');
+        const progressFailure = document.getElementById('analyzerProgressFailure');
+        
+        if (progressSuccess) progressSuccess.style.width = '33%';
+        if (progressPartial) progressPartial.style.width = '33%';
+        if (progressFailure) progressFailure.style.width = '34%';
+        
+        const legendSuccess = document.getElementById('analyzerLegendSuccess');
+        const legendPartial = document.getElementById('analyzerLegendPartial');
+        const legendFailure = document.getElementById('analyzerLegendFailure');
+        
+        if (legendSuccess) legendSuccess.textContent = '?';
+        if (legendPartial) legendPartial.textContent = '?';
+        if (legendFailure) legendFailure.textContent = '?';
+        
+        const quickSummary = document.getElementById('analyzerQuickSummary');
+        if (quickSummary) {
+            quickSummary.innerHTML = `<span class="summary-item" style="color: var(--warning);">⚠️ Sélectionnez un familier</span>`;
+        }
+        
+        const headerScoreDisplay = document.getElementById('analyzerScoreDisplay');
+        if (headerScoreDisplay) {
+            headerScoreDisplay.innerHTML = `<div class="score-badge"><span class="score-value">?</span></div>`;
+        }
     }
 
     const rewardDiv = document.getElementById('rewardRanges');
@@ -220,19 +321,62 @@ export function analyzeExpedition() {
             experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * locationWeights.experience),
             money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * locationWeights.money)
         };
-        const expectedTokens = calculateExpectedTokens(rewardIndex, durationMinutes, false);
-        const expectedTokensBonus = calculateExpectedTokens(rewardIndex, durationMinutes, true);
+        const expectedTokens = calculateExpectedTokens(rewardIndex, durationMinutes, hasTokenBonus);
+
+        const formatMultiplierBadge = (mult) => {
+            const color = mult > 1 ? '#22c55e' : mult < 1 ? '#ef4444' : '#eab308';
+            return `<span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 6px; font-weight: bold;">×${mult.toFixed(1)}</span>`;
+        };
+
+        const tokenBonusBadge = hasTokenBonus 
+            ? '<span style="background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 6px; font-weight: bold;">×3</span>' 
+            : '';
 
         rewardDiv.innerHTML = `
-            ${renderRewardsCard('✅ Succès total', exactRewards, locationWeights, expectedTokens)}
-            ${renderRewardsCard('⚠️ Succès partiel (÷2)', {
-                points: Math.round(exactRewards.points / 2),
-                experience: Math.round(exactRewards.experience / 2),
-                money: Math.round(exactRewards.money / 2)
-            }, locationWeights, { min: Math.ceil(expectedTokens.min / 2), max: Math.ceil(expectedTokens.max / 2) }, true)}
-            ${renderTokensCard(expectedTokens, expectedTokensBonus)}
-            ${renderRarityCard(rewardIndex)}
-            ${renderTalismanCard(rewardIndex, hasTalismanBonus)}
+            <!-- Table des récompenses par issue -->
+            <div class="table-responsive">
+                <table class="result-table modern">
+                    <thead>
+                        <tr>
+                            <th>Récompense</th>
+                            <th class="success-col">✅ Succès total</th>
+                            <th class="partial-col">⚠️ Partiel (×0.5)</th>
+                            <th class="failure-col">❌ Échec</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🪙 Tokens ${tokenBonusBadge}</td>
+                            <td class="multiplier-cell mult-full">${expectedTokens.min}-${expectedTokens.max}</td>
+                            <td class="multiplier-cell mult-partial">${Math.ceil(expectedTokens.min / 2)}-${Math.ceil(expectedTokens.max / 2)}</td>
+                            <td class="multiplier-cell mult-none">0</td>
+                        </tr>
+                        <tr>
+                            <td>🏅 Points ${formatMultiplierBadge(locationWeights.points)}</td>
+                            <td class="multiplier-cell mult-full">${exactRewards.points}</td>
+                            <td class="multiplier-cell mult-partial">${Math.round(exactRewards.points / 2)}</td>
+                            <td class="multiplier-cell mult-none">0</td>
+                        </tr>
+                        <tr>
+                            <td>⭐ Expérience ${formatMultiplierBadge(locationWeights.experience)}</td>
+                            <td class="multiplier-cell mult-full">${exactRewards.experience}</td>
+                            <td class="multiplier-cell mult-partial">${Math.round(exactRewards.experience / 2)}</td>
+                            <td class="multiplier-cell mult-none">0</td>
+                        </tr>
+                        <tr>
+                            <td>💰 Argent ${formatMultiplierBadge(locationWeights.money)}</td>
+                            <td class="multiplier-cell mult-full">${exactRewards.money}</td>
+                            <td class="multiplier-cell mult-partial">${Math.round(exactRewards.money / 2)}</td>
+                            <td class="multiplier-cell mult-none">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="rewards-grid" style="margin-top: 16px;">
+                ${renderRarityCard(rewardIndex)}
+                ${renderTalismanCard(rewardIndex, hasTalismanBonus)}
+            </div>
         `;
     }
 
@@ -308,67 +452,6 @@ function renderScenario(title, riskLabel, diffLabel, effectiveRisk, rates, color
                 <span>⚠️ Partiel: <strong>${rates.partialSuccessRate.toFixed(1)}%</strong></span>
                 <span>❌ Échec: <strong>${rates.failureRate.toFixed(1)}%</strong></span>
             </div>
-        </div>
-    `;
-}
-
-function renderRewardsCard(title, rewards, locationWeights, expectedTokens = null, isPartial = false) {
-    const formatMultiplierBadge = (value) => {
-        if (value > 1) return `<span class="multiplier-badge" style="background: var(--success) !important; color: #1a1a2e !important;">×${value}</span>`;
-        if (value < 1) return `<span class="multiplier-badge" style="background: var(--danger) !important; color: white !important;">×${value}</span>`;
-        return `<span class="multiplier-badge" style="background: var(--warning) !important; color: #1a1a2e !important;">×${value}</span>`;
-    };
-
-    const tokensHtml = expectedTokens ? `
-        <div class="reward-range-item">
-            <div class="icon">🪙</div>
-            <div class="range">${expectedTokens.min}-${expectedTokens.max}</div>
-            <div class="label">Tokens</div>
-        </div>
-    ` : '';
-
-    return `
-        <div class="reward-range-card" style="${isPartial ? 'opacity: 0.8;' : ''}">
-            <h4>${title}</h4>
-            <div class="reward-range-grid">
-                ${tokensHtml}
-                <div class="reward-range-item">
-                    <div class="icon">🏅</div>
-                    <div class="range">${rewards.points}</div>
-                    <div class="label">Points ${formatMultiplierBadge(locationWeights.points)}</div>
-                </div>
-                <div class="reward-range-item">
-                    <div class="icon">⭐</div>
-                    <div class="range">${rewards.experience}</div>
-                    <div class="label">XP ${formatMultiplierBadge(locationWeights.experience)}</div>
-                </div>
-                <div class="reward-range-item">
-                    <div class="icon">💰</div>
-                    <div class="range">${rewards.money}</div>
-                    <div class="label">Argent ${formatMultiplierBadge(locationWeights.money)}</div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderTokensCard(expectedTokens, expectedTokensBonus) {
-    return `
-        <div class="reward-range-card">
-            <h4>🪙 Tokens estimés</h4>
-            <div class="reward-range-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="reward-range-item">
-                    <div class="range">${expectedTokens.min}-${expectedTokens.max}</div>
-                    <div class="label">Sans bonus</div>
-                </div>
-                <div class="reward-range-item" style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; padding: 10px;">
-                    <div class="range" style="color: #8b5cf6;">${expectedTokensBonus.min}-${expectedTokensBonus.max}</div>
-                    <div class="label">Avec bonus ×3 <small>(1/8)</small></div>
-                </div>
-            </div>
-            <small style="color: var(--text-secondary); display: block; margin-top: 10px;">
-                Les tokens sont attribués uniquement en cas de succès (total ou partiel).
-            </small>
         </div>
     `;
 }

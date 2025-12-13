@@ -1,5 +1,5 @@
 // simulator.js - Logique du simulateur d'expédition
-import { getPetById } from './state.js';
+import { getPetById, getExpeditionById } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML } from './utils.js';
 import {
@@ -12,9 +12,11 @@ import {
     calculateProfitabilityScore,
     calculateExpectedTokens,
     formatScoreDisplay,
+    formatScoreDisplayExpanded,
+    formatRiskAnalysis,
     describeRewardCategory
 } from './calculations.js';
-import { getSelectedLocation, showToast } from './ui.js';
+import { getSelectedExpedition, showToast } from './ui.js';
 
 export function simulateExpedition() {
     const petIdInput = document.getElementById('selectedPetId');
@@ -26,12 +28,20 @@ export function simulateExpedition() {
         return;
     }
 
+    // Récupérer l'expédition sélectionnée
+    const { id: expeditionId, type: locationType } = getSelectedExpedition();
+    const expedition = expeditionId ? getExpeditionById(expeditionId) : null;
+    
+    if (!locationType) {
+        showToast('⚠️ Veuillez sélectionner une expédition');
+        return;
+    }
+
     const lovePoints = Math.max(80, Math.min(110, parseInt(document.getElementById('lovePoints').value, 10)));
     const baseDuration = Math.max(10, Math.min(4320, parseInt(document.getElementById('duration').value, 10)));
     const riskRate = Math.max(0, Math.min(100, parseInt(document.getElementById('riskRate').value, 10)));
     const difficulty = Math.max(0, Math.min(100, parseInt(document.getElementById('difficulty').value, 10)));
     const wealthRate = Math.max(0, Math.min(200, parseInt(document.getElementById('wealthRate').value, 10))) / 100;
-    const locationType = getSelectedLocation();
     const hasCloneTalisman = document.getElementById('hasCloneTalisman').checked;
     const hasTalismanBonus = document.getElementById('hasTalismanBonus').checked;
     const hasTokenBonus = document.getElementById('hasTokenBonus')?.checked ?? false;
@@ -75,6 +85,7 @@ export function simulateExpedition() {
 
     displayResults({
         pet,
+        expedition,
         lovePoints,
         baseDuration,
         effectiveDuration,
@@ -114,15 +125,50 @@ function displayResults(data) {
     resultsDiv.style.display = 'block';
     resultsDiv.classList.add('show');
 
+    // Afficher le nom de l'expédition si disponible
+    const expeditionDisplay = data.expedition 
+        ? `${EXPEDITION_CONSTANTS.LOCATION_EMOJIS[data.locationType]} ${escapeHTML(data.expedition.name)} <span class="type-badge">${LOCATION_NAMES[data.locationType]}</span>`
+        : `${EXPEDITION_CONSTANTS.LOCATION_EMOJIS[data.locationType]} ${escapeHTML(LOCATION_NAMES[data.locationType])}`;
+
+    // Quick Summary
+    const quickSummary = document.getElementById('quickSummary');
+    if (quickSummary) {
+        const successClass = data.totalSuccessRate >= 70 ? 'positive' : data.totalSuccessRate >= 40 ? 'neutral' : 'negative';
+        quickSummary.innerHTML = `
+            <div class="quick-summary-items">
+                <span class="summary-item">${expeditionDisplay}</span>
+                <span class="summary-divider">•</span>
+                <span class="summary-item"><strong>${escapeHTML(data.pet.name)}</strong></span>
+                <span class="summary-divider">•</span>
+                <span class="summary-item ${successClass}">${data.totalSuccessRate.toFixed(1)}% succès</span>
+                <span class="summary-divider">•</span>
+                <span class="summary-item">⏱️ ${formatDuration(data.effectiveDuration)}</span>
+            </div>
+        `;
+    }
+
+    // Header profitability score (compact)
+    const profitabilityContainer = document.getElementById('profitabilityScoreDisplay');
+    if (profitabilityContainer) {
+        profitabilityContainer.innerHTML = formatScoreDisplay(data.profitabilityScore);
+    }
+
+    // Expanded profitability score
+    const profitabilityExpanded = document.getElementById('profitabilityScoreExpanded');
+    if (profitabilityExpanded) {
+        profitabilityExpanded.innerHTML = formatScoreDisplayExpanded(data);
+    }
+
+    // Summary table (details tab)
     const summaryBody = document.querySelector('#summaryTable tbody');
     if (summaryBody) {
         summaryBody.innerHTML = `
             <tr><td>🐾 Familier</td><td>${escapeHTML(data.pet.name)} (Force: ${escapeHTML(data.pet.force)}, Vitesse: ${escapeHTML(data.pet.speed)})</td></tr>
+            <tr><td>🗺️ Expédition</td><td>${expeditionDisplay}</td></tr>
             <tr><td>💕 Points d'amour</td><td>${escapeHTML(data.lovePoints)}</td></tr>
             <tr><td>⏱️ Durée de base</td><td>${formatDuration(data.baseDuration)}</td></tr>
             <tr><td>🚀 Modificateur de vitesse</td><td>x${data.speedModifier.toFixed(2)} (${data.speedModifier < 1 ? '-' : '+'}${Math.abs(Math.round((1 - data.speedModifier) * 100))}%)</td></tr>
             <tr><td>🕐 Durée effective</td><td>${formatDuration(data.effectiveDuration)}</td></tr>
-            <tr><td>🗺️ Type d'expédition</td><td>${EXPEDITION_CONSTANTS.LOCATION_EMOJIS[data.locationType]} ${escapeHTML(LOCATION_NAMES[data.locationType])}</td></tr>
             <tr><td>⚠️ Dangerosité initiale</td><td>${escapeHTML(data.riskRate)}% (${getCategoryName(data.riskRate, EXPEDITION_CONSTANTS.RISK_CATEGORIES)})</td></tr>
             <tr><td>🎯 Difficulté</td><td>${escapeHTML(data.difficulty)} (${getCategoryName(data.difficulty, EXPEDITION_CONSTANTS.DIFFICULTY_CATEGORIES)})</td></tr>
             <tr><td>💎 Taux de richesse</td><td>${data.wealthRate.toFixed(2)} (${getCategoryName(data.wealthRate, EXPEDITION_CONSTANTS.WEALTH_CATEGORIES)})</td></tr>
@@ -134,9 +180,17 @@ function displayResults(data) {
         `;
     }
 
-    const profitabilityContainer = document.getElementById('profitabilityScoreDisplay');
-    if (profitabilityContainer) {
-        profitabilityContainer.innerHTML = formatScoreDisplay(data.profitabilityScore);
+    // Update cancel love change based on love points
+    const cancelLoveChange = document.getElementById('cancelLoveChange');
+    if (cancelLoveChange) {
+        const cancelPenalty = data.lovePoints > 80 ? Math.floor((data.lovePoints - 80) / 2) + 15 : 15;
+        cancelLoveChange.textContent = `-${cancelPenalty}`;
+    }
+
+    // Risk Analysis
+    const riskAnalysis = document.getElementById('riskAnalysis');
+    if (riskAnalysis) {
+        riskAnalysis.innerHTML = formatRiskAnalysis(data);
     }
 
     const successSegment = document.getElementById('progressSuccess');

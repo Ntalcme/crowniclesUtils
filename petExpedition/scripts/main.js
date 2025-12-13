@@ -5,6 +5,8 @@ import {
     initSliders,
     initAnalyzerSliders,
     initBranchSelect,
+    initExpeditionDropdown,
+    initAnalyzerExpeditionDropdown,
     showToast
 } from './ui.js';
 import { escapeHTML } from './utils.js';
@@ -46,6 +48,37 @@ function registerGlobalEvents() {
             activateTab(button.dataset.target);
         });
     }
+
+    // Gestion des onglets dans les résultats
+    initResultsTabs();
+}
+
+function initResultsTabs() {
+    // Écouter les clics sur les onglets de résultats (délégation)
+    document.addEventListener('click', (event) => {
+        const tab = event.target.closest('.results-tab');
+        if (!tab) return;
+        
+        const tabName = tab.dataset.tab;
+        if (!tabName) return;
+        
+        // Trouver le conteneur parent (simulateur ou analyseur)
+        const tabsContainer = tab.closest('.results-tabs');
+        if (!tabsContainer) return;
+        
+        // Activer l'onglet dans ce conteneur uniquement
+        tabsContainer.querySelectorAll('.results-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Trouver le conteneur de panels correspondant
+        const tabContent = tabsContainer.nextElementSibling;
+        if (!tabContent || !tabContent.classList.contains('results-tab-content')) return;
+        
+        // Afficher le panel correspondant dans ce conteneur uniquement
+        tabContent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(`panel-${tabName}`);
+        if (panel) panel.classList.add('active');
+    });
 }
 
 function activateTab(target) {
@@ -89,6 +122,12 @@ function revealSimulatorUI() {
     if (tabNav) tabNav.style.display = 'flex';
     if (simulatorCard) simulatorCard.style.display = 'block';
     activateTab('simulator');
+    
+    // Initialiser les dropdowns des expéditions après le chargement des données
+    initExpeditionDropdown();
+    initAnalyzerExpeditionDropdown();
+    initPetDropdown();
+    initAnalyzerPetDropdown();
 }
 
 async function bootstrap() {
@@ -106,8 +145,7 @@ async function bootstrap() {
     await initBranchSelect();
     initSliders();
     initAnalyzerSliders();
-    initPetDropdown();
-    initAnalyzerPetDropdown();
+    // Les dropdowns pet et expedition sont initialisés dans revealSimulatorUI après le chargement des données
     registerGlobalEvents();
 }
 

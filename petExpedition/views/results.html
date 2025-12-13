@@ -1,104 +1,157 @@
-<div id="results" style="display: none;">
-    <div class="card">
-        <h2>📋 Récapitulatif de l'expédition</h2>
-        <table class="result-table" id="summaryTable">
-            <tbody></tbody>
-        </table>
-    </div>
-    <div class="card">
-        <h2>📈 Score de rentabilité</h2>
-        <div id="profitabilityScoreDisplay"></div>
-        <div class="info-box" style="margin-top: 15px;">
-            <p><strong>Formule du score :</strong></p>
-            <p style="font-size: 0.9em; margin-top: 5px;">
-                Score = (Taux succès × 35%) + (Index récompense × 35%) + (Talisman × 15%) + (Tokens × 10%) + (Temps × 5%)<br>
-                <span style="color: var(--text-secondary);">
-                    • Bonus +8% si succès >95%, +4% si >85%<br>
-                    • Bonus +5% pour zone optimale (index 4-7 avec >70% succès)<br>
-                    • Talisman et tokens sont des BONUS, pas requis pour une bonne note
-                </span>
-            </p>
+<div id="results" class="results-container" style="display: none;">
+    <!-- Header avec résumé rapide -->
+    <div class="results-header card">
+        <div class="results-header-content">
+            <h2>📊 Résultats de la simulation</h2>
+            <div id="quickSummary" class="quick-summary"></div>
         </div>
+        <div id="profitabilityScoreDisplay" class="score-display-compact"></div>
     </div>
-    <div class="card">
-        <h2>📊 Taux de réussite</h2>
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-segment progress-success" id="progressSuccess"></div>
-                <div class="progress-segment progress-partial" id="progressPartial"></div>
-                <div class="progress-segment progress-failure" id="progressFailure"></div>
-            </div>
-            <div class="progress-legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #22c55e;"></div>
-                    <span>Succès total (<span id="legendSuccess">0</span>%)</span>
+
+    <!-- Navigation par onglets -->
+    <div class="results-tabs">
+        <button class="results-tab active" data-tab="overview">📋 Aperçu</button>
+        <button class="results-tab" data-tab="rewards">🎁 Récompenses</button>
+        <button class="results-tab" data-tab="risks">⚠️ Risques</button>
+        <button class="results-tab" data-tab="details">📝 Détails</button>
+    </div>
+
+    <!-- Contenu des onglets -->
+    <div class="results-tab-content">
+        <!-- Onglet Aperçu -->
+        <div class="tab-panel active" id="panel-overview">
+            <div class="overview-grid">
+                <!-- Progression des risques -->
+                <div class="card overview-card">
+                    <h3>📊 Taux de réussite</h3>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-segment progress-success" id="progressSuccess"></div>
+                            <div class="progress-segment progress-partial" id="progressPartial"></div>
+                            <div class="progress-segment progress-failure" id="progressFailure"></div>
+                        </div>
+                        <div class="progress-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #22c55e;"></div>
+                                <span>Succès total (<span id="legendSuccess">0</span>%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #f59e0b;"></div>
+                                <span>Succès partiel (<span id="legendPartial">0</span>%)</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #dc2626;"></div>
+                                <span>Échec (<span id="legendFailure">0</span>%)</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #f59e0b;"></div>
-                    <span>Succès partiel (<span id="legendPartial">0</span>%)</span>
+
+                <!-- Score de rentabilité -->
+                <div class="card overview-card">
+                    <h3>📈 Rentabilité</h3>
+                    <div id="profitabilityScoreExpanded"></div>
+                    <div class="info-box compact" style="margin-top: 12px;">
+                        <p style="font-size: 0.85em; color: var(--text-secondary);">
+                            Score = Succès(35%) + Index(35%) + Talisman(15%) + Tokens(10%) + Temps(5%)
+                        </p>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #dc2626;"></div>
-                    <span>Échec (<span id="legendFailure">0</span>%)</span>
+
+                <!-- Changements d'amour -->
+                <div class="card overview-card full-width">
+                    <h3>💕 Changement d'amour</h3>
+                    <div class="love-change-grid compact">
+                        <div class="love-change-item">
+                            <span class="love-icon">✅</span>
+                            <span class="love-label">Succès</span>
+                            <span class="love-value positive">+5</span>
+                        </div>
+                        <div class="love-change-item">
+                            <span class="love-icon">⚠️</span>
+                            <span class="love-label">Partiel</span>
+                            <span class="love-value neutral">0</span>
+                        </div>
+                        <div class="love-change-item">
+                            <span class="love-icon">❌</span>
+                            <span class="love-label">Échec</span>
+                            <span class="love-value negative">-10</span>
+                        </div>
+                        <div class="love-change-item">
+                            <span class="love-icon">🔙</span>
+                            <span class="love-label">Rappel</span>
+                            <span class="love-value negative">-25</span>
+                        </div>
+                        <div class="love-change-item">
+                            <span class="love-icon">🚫</span>
+                            <span class="love-label">Annul.</span>
+                            <span class="love-value negative" id="cancelLoveChange">-15</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="card">
-        <h2>🎁 Récompenses</h2>
-        <table class="result-table" id="rewardsTable">
-            <thead>
-                <tr>
-                    <th>Récompense</th>
-                    <th>Succès total</th>
-                    <th>Succès partiel (x0.5)</th>
-                    <th>Échec</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <div class="info-box" style="margin-top: 20px;">
-            <p><strong>🧬 Talisman de clonage :</strong></p>
-            <table class="result-table" id="talismanTable">
-                <thead>
-                    <tr>
-                        <th>Condition</th>
-                        <th>Chance de base</th>
-                        <th>Avec bonus x10</th>
-                        <th>Succès pondéré</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+
+        <!-- Onglet Récompenses -->
+        <div class="tab-panel" id="panel-rewards">
+            <div class="card">
+                <h3>🎁 Récompenses par issue</h3>
+                <div class="table-responsive">
+                    <table class="result-table modern" id="rewardsTable">
+                        <thead>
+                            <tr>
+                                <th>Récompense</th>
+                                <th class="success-col">✅ Succès total</th>
+                                <th class="partial-col">⚠️ Partiel (×0.5)</th>
+                                <th class="failure-col">❌ Échec</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="rewards-grid">
+                <div class="card">
+                    <h3>🧬 Talisman de clonage</h3>
+                    <div class="table-responsive">
+                        <table class="result-table modern" id="talismanTable">
+                            <thead>
+                                <tr>
+                                    <th>Condition</th>
+                                    <th>Chance</th>
+                                    <th>Succès pondéré</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📦 Rareté d'items</h3>
+                    <div id="itemRarityDisplay"></div>
+                </div>
+            </div>
         </div>
-        <div class="info-box">
-            <p><strong>📦 Rareté d'item obtenable :</strong></p>
-            <div id="itemRarityDisplay" style="margin-top: 10px;"></div>
+
+        <!-- Onglet Risques -->
+        <div class="tab-panel" id="panel-risks">
+            <div class="card">
+                <h3>⚠️ Analyse des risques</h3>
+                <div id="riskAnalysis" class="risk-analysis"></div>
+            </div>
         </div>
-    </div>
-    <div class="card">
-        <h2>💕 Changement d'amour</h2>
-        <div class="love-change-grid">
-            <div class="love-change-card">
-                <h4>✅ Succès total</h4>
-                <div class="love-change-value love-positive">+5</div>
-            </div>
-            <div class="love-change-card">
-                <h4>⚠️ Succès partiel</h4>
-                <div class="love-change-value love-neutral">0</div>
-            </div>
-            <div class="love-change-card">
-                <h4>❌ Échec total</h4>
-                <div class="love-change-value love-negative">-10</div>
-            </div>
-            <div class="love-change-card">
-                <h4>🔙 Rappel en cours</h4>
-                <div class="love-change-value love-negative">-25</div>
-            </div>
-            <div class="love-change-card">
-                <h4>🚫 Annulation</h4>
-                <div class="love-change-value love-negative" id="cancelLoveChange">-15</div>
-                <small style="color: var(--text-secondary);">Base, augmente avec répétition</small>
+
+        <!-- Onglet Détails -->
+        <div class="tab-panel" id="panel-details">
+            <div class="card">
+                <h3>📋 Paramètres complets</h3>
+                <div class="table-responsive">
+                    <table class="result-table modern striped" id="summaryTable">
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

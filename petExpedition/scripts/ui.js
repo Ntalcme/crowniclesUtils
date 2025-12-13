@@ -1,6 +1,6 @@
 // ui.js - Gestion des interactions d'interface
-import { getPets, getPetById } from './state.js';
-import { EXPEDITION_CONSTANTS, RARITY_NAMES } from './constants.js';
+import { getPets, getPetById, getExpeditions, getExpeditionById } from './state.js';
+import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES, LOCATION_DESCRIPTIONS } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML, normalizeString } from './utils.js';
 import { fetchGitHubBranches } from './dataService.js';
 
@@ -97,10 +97,19 @@ export function selectAnalyzerPet(petId) {
 export function initSliders() {
     const loveSlider = document.getElementById('lovePoints');
     const loveValue = document.getElementById('loveValue');
+    const loveHint = document.getElementById('loveMinHint');
+    
     if (loveSlider && loveValue) {
-        loveSlider.addEventListener('input', () => {
-            loveValue.textContent = loveSlider.value;
-        });
+        const updateLove = () => {
+            const val = parseInt(loveSlider.value, 10);
+            loveValue.textContent = val;
+            // Afficher le message uniquement quand 80 points sont sélectionnés
+            if (loveHint) {
+                loveHint.style.display = val === 80 ? 'block' : 'none';
+            }
+        };
+        loveSlider.addEventListener('input', updateLove);
+        updateLove();
     }
 
     const durationSlider = document.getElementById('duration');
@@ -152,34 +161,265 @@ export function initSliders() {
         updateWealth();
     }
 
-    initLocationGrid();
     initBonusExclusivity();
+}
+
+// =============== EXPEDITION DROPDOWN ===============
+
+function renderExpeditionDropdownItems(dropdown, filter, groupByType = true) {
+    const normalizedFilter = normalizeString(filter || '');
+    const expeditions = getExpeditions().filter(exp => 
+        normalizeString(exp.name).includes(normalizedFilter) ||
+        normalizeString(LOCATION_NAMES[exp.type] || '').includes(normalizedFilter)
+    );
+    
+    if (groupByType && !filter) {
+        // Grouper par type d'expédition
+        const grouped = {};
+        expeditions.forEach(exp => {
+            if (!grouped[exp.type]) grouped[exp.type] = [];
+            grouped[exp.type].push(exp);
+        });
+        
+        let html = '';
+        const typeOrder = ['plains', 'forest', 'mountain', 'desert', 'swamp', 'coast', 'ruins', 'cave'];
+        
+        typeOrder.forEach(type => {
+            if (!grouped[type] || grouped[type].length === 0) return;
+            const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[type] || '📍';
+            const typeName = LOCATION_NAMES[type] || type;
+            
+            html += `<div class="dropdown-group-header">${emoji} ${typeName}</div>`;
+            grouped[type].forEach(exp => {
+                html += renderExpeditionItem(exp);
+            });
+        });
+        
+        dropdown.innerHTML = html;
+    } else {
+        dropdown.innerHTML = expeditions.map(exp => renderExpeditionItem(exp)).join('');
+    }
+}
+
+function renderExpeditionItem(exp) {
+    const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[exp.type] || '📍';
+    const typeName = LOCATION_NAMES[exp.type] || exp.type;
+    return `
+        <div class="dropdown-item expedition-item" data-expedition-id="${exp.id}" data-expedition-type="${exp.type}">
+            <span class="expedition-icon">${emoji}</span>
+            <div class="expedition-info">
+                <span class="expedition-name">${escapeHTML(exp.name)}</span>
+                <span class="expedition-type-badge">${typeName}</span>
+            </div>
+        </div>
+    `;
+}
+
+export function initExpeditionDropdown() {
+    const searchInput = document.getElementById('expeditionSearch');
+    const dropdown = document.getElementById('expeditionDropdown');
+    const hiddenInput = document.getElementById('selectedExpeditionId');
+    const hiddenTypeInput = document.getElementById('selectedExpeditionType');
+    
+    if (!searchInput || !dropdown) return;
+
+    ensureDropdownCloseHandler();
+
+    const render = (filter = '') => renderExpeditionDropdownItems(dropdown, filter);
+
+    searchInput.addEventListener('focus', () => {
+        render('');
+        dropdown.classList.add('show');
+    });
+
+    searchInput.addEventListener('input', (event) => {
+        render(event.target.value);
+        dropdown.classList.add('show');
+    });
+
+    dropdown.addEventListener('click', (event) => {
+        const item = event.target.closest('.dropdown-item');
+        if (!item) return;
+        
+        const expeditionId = Number(item.dataset.expeditionId);
+        const expeditionType = item.dataset.expeditionType;
+        
+        selectExpedition(expeditionId, expeditionType);
+        dropdown.classList.remove('show');
+    });
+}
+
+export function selectExpedition(expeditionId, expeditionType) {
+    const expedition = getExpeditionById(expeditionId);
+    if (!expedition) return;
+    
+    const searchInput = document.getElementById('expeditionSearch');
+    const hiddenIdInput = document.getElementById('selectedExpeditionId');
+    const hiddenTypeInput = document.getElementById('selectedExpeditionType');
+    const infoDiv = document.getElementById('expeditionInfo');
+    
+    const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[expedition.type] || '📍';
+    
+    if (searchInput) searchInput.value = `${emoji} ${expedition.name}`;
+    if (hiddenIdInput) hiddenIdInput.value = String(expeditionId);
+    if (hiddenTypeInput) hiddenTypeInput.value = expedition.type;
+    
+    updateExpeditionInfo(expedition);
+}
+
+export function updateExpeditionInfo(expedition) {
+    const infoDiv = document.getElementById('expeditionInfo');
+    if (!infoDiv) return;
+    
+    const weights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[expedition.type];
+    const typeName = LOCATION_NAMES[expedition.type] || expedition.type;
+    const typeDesc = LOCATION_DESCRIPTIONS[expedition.type] || '';
+    
+    const formatWeight = (value, label) => {
+        const colorClass = value > 1 ? 'bonus-positive' : value < 1 ? 'bonus-negative' : 'bonus-neutral';
+        return `<span class="${colorClass}">${label} ×${value}</span>`;
+    };
+    
+    infoDiv.innerHTML = `
+        <div class="expedition-details">
+            <div class="expedition-type-info">
+                <strong>Type:</strong> ${typeName}
+                <span class="expedition-type-desc">${typeDesc}</span>
+            </div>
+            <div class="expedition-bonuses">
+                <strong>Multiplicateurs:</strong>
+                <div class="bonus-grid">
+                    ${formatWeight(weights.money, '💰 Argent')}
+                    ${formatWeight(weights.experience, '⭐ XP')}
+                    ${formatWeight(weights.points, '🏆 Points')}
+                </div>
+            </div>
+            ${expedition.description ? `<div class="expedition-description"><em>${escapeHTML(expedition.description)}</em></div>` : ''}
+        </div>
+    `;
+    infoDiv.style.display = 'block';
+}
+
+export function getSelectedExpedition() {
+    const hiddenInput = document.getElementById('selectedExpeditionId');
+    const typeInput = document.getElementById('selectedExpeditionType');
+    return {
+        id: hiddenInput ? parseInt(hiddenInput.value, 10) : null,
+        type: typeInput ? typeInput.value : 'plains'
+    };
+}
+
+// === Analyzer Expedition Dropdown ===
+
+export function initAnalyzerExpeditionDropdown() {
+    const searchInput = document.getElementById('analyzerExpeditionSearch');
+    const dropdown = document.getElementById('analyzerExpeditionDropdown');
+    
+    if (!searchInput || !dropdown) return;
+
+    ensureDropdownCloseHandler();
+
+    const render = (filter = '') => renderExpeditionDropdownItems(dropdown, filter);
+
+    searchInput.addEventListener('focus', () => {
+        render('');
+        dropdown.classList.add('show');
+    });
+
+    searchInput.addEventListener('input', (event) => {
+        render(event.target.value);
+        dropdown.classList.add('show');
+    });
+
+    dropdown.addEventListener('click', (event) => {
+        const item = event.target.closest('.dropdown-item');
+        if (!item) return;
+        
+        const expeditionId = Number(item.dataset.expeditionId);
+        const expeditionType = item.dataset.expeditionType;
+        
+        selectAnalyzerExpedition(expeditionId, expeditionType);
+        dropdown.classList.remove('show');
+    });
+}
+
+export function selectAnalyzerExpedition(expeditionId, expeditionType) {
+    const expedition = getExpeditionById(expeditionId);
+    if (!expedition) return;
+    
+    const searchInput = document.getElementById('analyzerExpeditionSearch');
+    const hiddenIdInput = document.getElementById('analyzerSelectedExpeditionId');
+    const hiddenTypeInput = document.getElementById('analyzerSelectedExpeditionType');
+    const infoDiv = document.getElementById('analyzerExpeditionInfo');
+    
+    const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[expedition.type] || '📍';
+    
+    if (searchInput) searchInput.value = `${emoji} ${expedition.name}`;
+    if (hiddenIdInput) hiddenIdInput.value = String(expeditionId);
+    if (hiddenTypeInput) hiddenTypeInput.value = expedition.type;
+    
+    updateAnalyzerExpeditionInfo(expedition);
+}
+
+export function updateAnalyzerExpeditionInfo(expedition) {
+    const infoDiv = document.getElementById('analyzerExpeditionInfo');
+    if (!infoDiv) return;
+    
+    const weights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[expedition.type];
+    const typeName = LOCATION_NAMES[expedition.type] || expedition.type;
+    const typeDesc = LOCATION_DESCRIPTIONS[expedition.type] || '';
+    
+    const formatWeight = (value, label) => {
+        const colorClass = value > 1 ? 'bonus-positive' : value < 1 ? 'bonus-negative' : 'bonus-neutral';
+        return `<span class="${colorClass}">${label} ×${value}</span>`;
+    };
+    
+    infoDiv.innerHTML = `
+        <div class="expedition-details">
+            <div class="expedition-type-info">
+                <strong>Type:</strong> ${typeName}
+                <span class="expedition-type-desc">${typeDesc}</span>
+            </div>
+            <div class="expedition-bonuses">
+                <strong>Multiplicateurs:</strong>
+                <div class="bonus-grid">
+                    ${formatWeight(weights.money, '💰 Argent')}
+                    ${formatWeight(weights.experience, '⭐ XP')}
+                    ${formatWeight(weights.points, '🏆 Points')}
+                </div>
+            </div>
+            ${expedition.description ? `<div class="expedition-description"><em>${escapeHTML(expedition.description)}</em></div>` : ''}
+        </div>
+    `;
+    infoDiv.style.display = 'block';
+}
+
+export function getAnalyzerSelectedExpedition() {
+    const hiddenInput = document.getElementById('analyzerSelectedExpeditionId');
+    const typeInput = document.getElementById('analyzerSelectedExpeditionType');
+    return {
+        id: hiddenInput ? parseInt(hiddenInput.value, 10) : null,
+        type: typeInput ? typeInput.value : 'plains'
+    };
 }
 
 export function initAnalyzerSliders() {
     const loveSlider = document.getElementById('analyzerLovePoints');
     const loveValue = document.getElementById('analyzerLoveValue');
+    const loveHint = document.getElementById('analyzerLoveMinHint');
+    
     if (loveSlider && loveValue) {
-        const update = () => { loveValue.textContent = loveSlider.value; };
+        const update = () => {
+            const val = parseInt(loveSlider.value, 10);
+            loveValue.textContent = val;
+            // Afficher le message uniquement quand 80 points sont sélectionnés
+            if (loveHint) {
+                loveHint.style.display = val === 80 ? 'block' : 'none';
+            }
+        };
         loveSlider.addEventListener('input', update);
         update();
     }
-}
-
-export function initLocationGrid() {
-    const grid = document.getElementById('locationGrid');
-    if (!grid) return;
-
-    const options = grid.querySelectorAll('.location-option');
-    options.forEach(option => {
-        option.addEventListener('click', () => {
-            options.forEach(opt => opt.classList.remove('selected'));
-            option.classList.add('selected');
-            updateLocationInfo(option.dataset.location);
-        });
-    });
-
-    updateLocationInfo(getSelectedLocation());
 }
 
 /**
@@ -224,25 +464,6 @@ export function initBonusExclusivity() {
     }
 }
 
-export function updateLocationInfo(location) {
-    const infoEl = document.getElementById('locationInfo');
-    const weights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[location];
-    if (!infoEl || !weights) return;
-
-    const formatWeight = (value) => {
-        if (value > 1) return `<span style="color: var(--success)">×${value}</span>`;
-        if (value < 1) return `<span style="color: var(--danger)">×${value}</span>`;
-        return `×${value}`;
-    };
-
-    infoEl.innerHTML = `Bonus: Argent ${formatWeight(weights.money)}, XP ${formatWeight(weights.experience)}, Points ${formatWeight(weights.points)}`;
-}
-
-export function getSelectedLocation() {
-    const selected = document.querySelector('.location-option.selected');
-    return selected ? selected.dataset.location : 'plains';
-}
-
 let cachedBranches = [];
 
 function renderBranchDropdownItems(dropdown, filter) {
@@ -276,7 +497,7 @@ export async function initBranchSelect() {
         cachedBranches = await fetchGitHubBranches();
         
         // Définir la branche par défaut
-        const defaultBranch = 'petexploration';
+        const defaultBranch = 'develop';
         if (cachedBranches.includes(defaultBranch)) {
             selectBranch(defaultBranch);
         } else if (cachedBranches.length > 0) {
@@ -288,8 +509,8 @@ export async function initBranchSelect() {
         console.error('Erreur lors du chargement des branches:', error);
         showToast('⚠️ Impossible de charger les branches depuis GitHub');
         // Fallback sur quelques branches communes
-        cachedBranches = ['master', 'petexploration', 'develop'];
-        selectBranch('petexploration');
+        cachedBranches = ['master', 'develop', 'petexploration'];
+        selectBranch('develop');
     }
 
     const render = (filter = '') => renderBranchDropdownItems(dropdown, filter);

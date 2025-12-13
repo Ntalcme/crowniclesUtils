@@ -389,6 +389,240 @@ export function formatScoreDisplay(scoreResult, showExplanation = true) {
     `;
 }
 
+export function formatScoreDisplayExpanded(data) {
+    const { score, details } = data.profitabilityScore;
+    const { label, color, emoji } = getScoreLabel(score);
+    const percentage = (score * 100).toFixed(1);
+
+    // Breakdown bars
+    const breakdown = [
+        { name: 'Succès', value: details.successScore, weight: 35, color: '#22c55e' },
+        { name: 'Index', value: details.rewardScore, weight: 35, color: '#3b82f6' },
+        { name: 'Talisman', value: details.talismanScore, weight: 15, color: '#8b5cf6' },
+        { name: 'Tokens', value: details.tokenScore, weight: 10, color: '#f59e0b' },
+        { name: 'Temps', value: details.timeEfficiency, weight: 5, color: '#06b6d4' }
+    ];
+
+    const breakdownHTML = breakdown.map(b => `
+        <div class="score-breakdown-row">
+            <span class="breakdown-label">${b.name} (${b.weight}%)</span>
+            <div class="breakdown-bar-container">
+                <div class="breakdown-bar" style="width: ${b.value * 100}%; background: ${b.color};"></div>
+            </div>
+            <span class="breakdown-value">${(b.value * 100).toFixed(0)}%</span>
+        </div>
+    `).join('');
+
+    return `
+        <div class="score-expanded">
+            <div class="score-main">
+                <div class="score-circle" style="--score: ${percentage}; --color: ${color};">
+                    <span class="score-value">${percentage}%</span>
+                </div>
+                <div class="score-label">
+                    <span class="score-emoji">${emoji}</span>
+                    <span class="score-text" style="color: ${color};">${label}</span>
+                </div>
+            </div>
+            <div class="score-breakdown">
+                ${breakdownHTML}
+            </div>
+        </div>
+    `;
+}
+
+// Version pour l'analyseur qui prend un objet score directement
+export function formatScoreExpandedFromScore(scoreResult) {
+    const { score, details } = scoreResult;
+    const { label, color, emoji } = getScoreLabel(score);
+    const percentage = (score * 100).toFixed(1);
+
+    // Breakdown bars
+    const breakdown = [
+        { name: 'Succès', value: details.successScore, weight: 35, color: '#22c55e' },
+        { name: 'Index', value: details.rewardScore, weight: 35, color: '#3b82f6' },
+        { name: 'Talisman', value: details.talismanScore, weight: 15, color: '#8b5cf6' },
+        { name: 'Tokens', value: details.tokenScore, weight: 10, color: '#f59e0b' },
+        { name: 'Temps', value: details.timeEfficiency, weight: 5, color: '#06b6d4' }
+    ];
+
+    const breakdownHTML = breakdown.map(b => `
+        <div class="score-breakdown-row">
+            <span class="breakdown-label">${b.name} (${b.weight}%)</span>
+            <div class="breakdown-bar-container">
+                <div class="breakdown-bar" style="width: ${b.value * 100}%; background: ${b.color};"></div>
+            </div>
+            <span class="breakdown-value">${(b.value * 100).toFixed(0)}%</span>
+        </div>
+    `).join('');
+
+    return `
+        <div class="score-expanded">
+            <div class="score-main">
+                <div class="score-circle" style="--score: ${percentage}; --color: ${color};">
+                    <span class="score-value">${percentage}%</span>
+                </div>
+                <div class="score-label">
+                    <span class="score-emoji">${emoji}</span>
+                    <span class="score-text" style="color: ${color};">${label}</span>
+                </div>
+            </div>
+            <div class="score-breakdown">
+                ${breakdownHTML}
+            </div>
+        </div>
+    `;
+}
+
+export function formatRiskAnalysis(data) {
+    const { riskRate, effectiveRisk, hasEnoughFood, difficulty, totalSuccessRate, partialSuccessRate, failureRate, lovePoints } = data;
+    
+    const riskFactors = [];
+    const warnings = [];
+    const tips = [];
+
+    // Analyze risk factors
+    if (!hasEnoughFood) {
+        warnings.push({
+            icon: '🍖',
+            title: 'Rations insuffisantes',
+            desc: 'Le risque est multiplié par 3 ! Assurez-vous d\'avoir assez de nourriture.',
+            severity: 'critical'
+        });
+    }
+
+    if (riskRate >= 30) {
+        riskFactors.push({
+            icon: '⚠️',
+            title: `Dangerosité élevée (${riskRate}%)`,
+            desc: getCategoryName(riskRate, EXPEDITION_CONSTANTS.RISK_CATEGORIES),
+            severity: 'high'
+        });
+    } else if (riskRate >= 15) {
+        riskFactors.push({
+            icon: '⚡',
+            title: `Dangerosité modérée (${riskRate}%)`,
+            desc: getCategoryName(riskRate, EXPEDITION_CONSTANTS.RISK_CATEGORIES),
+            severity: 'medium'
+        });
+    }
+
+    if (difficulty >= 7) {
+        riskFactors.push({
+            icon: '🎯',
+            title: `Difficulté extrême (${difficulty})`,
+            desc: getCategoryName(difficulty, EXPEDITION_CONSTANTS.DIFFICULTY_CATEGORIES),
+            severity: 'high'
+        });
+    } else if (difficulty >= 5) {
+        riskFactors.push({
+            icon: '🎯',
+            title: `Difficulté élevée (${difficulty})`,
+            desc: getCategoryName(difficulty, EXPEDITION_CONSTANTS.DIFFICULTY_CATEGORIES),
+            severity: 'medium'
+        });
+    }
+
+    // Tips based on situation
+    if (failureRate > 30) {
+        tips.push('Considérez un familier avec plus de force pour réduire le risque.');
+    }
+    if (lovePoints < 90 && totalSuccessRate < 80) {
+        tips.push('Augmenter les points d\'amour améliorerait les chances de succès.');
+    }
+    if (totalSuccessRate >= 90) {
+        tips.push('Excellentes chances de succès ! Cette expédition est sûre.');
+    }
+
+    // Generate HTML
+    let html = '';
+
+    // Summary meters
+    html += `
+        <div class="risk-meters">
+            <div class="risk-meter">
+                <span class="meter-label">Risque initial</span>
+                <div class="meter-bar">
+                    <div class="meter-fill ${getRiskSeverityClass(riskRate)}" style="width: ${riskRate}%;"></div>
+                </div>
+                <span class="meter-value">${riskRate}%</span>
+            </div>
+            <div class="risk-meter">
+                <span class="meter-label">Risque effectif</span>
+                <div class="meter-bar">
+                    <div class="meter-fill ${getRiskSeverityClass(effectiveRisk)}" style="width: ${Math.min(100, effectiveRisk)}%;"></div>
+                </div>
+                <span class="meter-value">${effectiveRisk.toFixed(1)}%</span>
+            </div>
+        </div>
+    `;
+
+    // Warnings
+    if (warnings.length > 0) {
+        html += '<div class="risk-warnings">';
+        warnings.forEach(w => {
+            html += `
+                <div class="risk-warning ${w.severity}">
+                    <span class="warning-icon">${w.icon}</span>
+                    <div class="warning-content">
+                        <strong>${w.title}</strong>
+                        <p>${w.desc}</p>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Risk factors
+    if (riskFactors.length > 0) {
+        html += '<div class="risk-factors">';
+        riskFactors.forEach(f => {
+            html += `
+                <div class="risk-factor ${f.severity}">
+                    <span class="factor-icon">${f.icon}</span>
+                    <div class="factor-content">
+                        <strong>${f.title}</strong>
+                        <span>${f.desc}</span>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Tips
+    if (tips.length > 0) {
+        html += '<div class="risk-tips">';
+        html += '<h4>💡 Conseils</h4>';
+        html += '<ul>';
+        tips.forEach(tip => {
+            html += `<li>${tip}</li>`;
+        });
+        html += '</ul>';
+        html += '</div>';
+    }
+
+    // If no issues
+    if (warnings.length === 0 && riskFactors.length === 0) {
+        html += `
+            <div class="risk-safe">
+                <span class="safe-icon">✅</span>
+                <p>Cette expédition présente un risque maîtrisé. Bonne chance !</p>
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function getRiskSeverityClass(risk) {
+    if (risk >= 50) return 'severity-critical';
+    if (risk >= 30) return 'severity-high';
+    if (risk >= 15) return 'severity-medium';
+    return 'severity-low';
+}
+
 export function describeRewardCategory(rewardIndex) {
     return getCategoryName(rewardIndex, EXPEDITION_CONSTANTS.REWARD_CATEGORIES);
 }
