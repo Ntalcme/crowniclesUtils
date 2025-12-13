@@ -48,3 +48,7 @@ Pour toute question ou suggestion, ouvrez une issue sur GitHub.
 ---
 
 Fait avec ❤️ pour la communauté Crownicles
+
+## 📜 Licence
+
+Ce dépôt est distribué sous la mention **Tous droits réservés**. Toute copie ou réutilisation sans autorisation écrite est interdite. Voir le fichier `LICENSE` pour les détails.
