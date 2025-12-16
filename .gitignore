@@ -33,3 +33,6 @@ build/
 tmp/
 temp/
 *.tmp
+
+# Password hash generator (ne pas déployer!)
+petExpedition/generate-hash.html

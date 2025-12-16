@@ -12,6 +12,7 @@ import {
 import { escapeHTML } from './utils.js';
 import { simulateExpedition } from './simulator.js';
 import { analyzeExpedition } from './analyzer.js';
+import { initAuth } from './auth.js';
 
 async function loadView(containerId, viewPath) {
     const container = document.getElementById(containerId);
@@ -131,6 +132,17 @@ function revealSimulatorUI() {
 }
 
 async function bootstrap() {
+    // Vérifier l'authentification avant de charger l'application
+    // Passer initApp comme callback pour exécuter après authentification
+    if (!initAuth(initApp)) {
+        return; // L'écran de login est affiché, attendre l'authentification
+    }
+    
+    // Si déjà authentifié, initialiser directement
+    await initApp();
+}
+
+async function initApp() {
     try {
         await loadViews();
     } catch (error) {
