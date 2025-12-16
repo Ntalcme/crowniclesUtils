@@ -1,147 +1,136 @@
-const PASSWORD_HASH = '1df62668b2f957738322c28d3b9950893a31f3b011f7c23267a6e5dc0aa3ff75';
+const AUTH_CONFIG = {
+    // Salt unique pour cette application (peut être public)
+    salt: 'crownicles_petExpedition_2024_salt_v1',
+    iterations: 100000,
+    passwordHash: 'd0af78b85e0d31762c784168fc445540699af62097a644d5acd55fd2d5bfd4cc',
+    // Durée de session en millisecondes (24h)
+    sessionDuration: 24 * 60 * 60 * 1000
+};
 
-// Clé de session pour localStorage
-const AUTH_KEY = 'petExpedition_authenticated';
-const AUTH_EXPIRY_KEY = 'petExpedition_auth_expiry';
-const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+const STORAGE_KEYS = {
+    authenticated: 'petExpedition_authenticated',
+    expiry: 'petExpedition_auth_expiry'
+};
 
-// Callback à appeler après authentification réussie
 let onAuthSuccessCallback = null;
 
-/**
- * Convertit un ArrayBuffer en chaîne hexadécimale
- */
-function bufferToHex(buffer) {
-    return Array.from(new Uint8Array(buffer))
+async function deriveKey(password, salt, iterations) {
+    const encoder = new TextEncoder();
+    
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    );
+    
+    const derivedBits = await crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode(salt),
+            iterations: iterations,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+    );
+    
+    return Array.from(new Uint8Array(derivedBits))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 }
 
-/**
- * Hash un mot de passe avec SHA-256
- */
 async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return bufferToHex(hashBuffer);
+    return deriveKey(password, AUTH_CONFIG.salt, AUTH_CONFIG.iterations);
 }
 
-/**
- * Vérifie si l'utilisateur est déjà authentifié
- */
+async function verifyPassword(password) {
+    const hash = await hashPassword(password);
+    return hash === AUTH_CONFIG.passwordHash;
+}
+
 function isAuthenticated() {
-    const authenticated = localStorage.getItem(AUTH_KEY);
-    const expiry = localStorage.getItem(AUTH_EXPIRY_KEY);
+    const authenticated = localStorage.getItem(STORAGE_KEYS.authenticated);
+    const expiry = localStorage.getItem(STORAGE_KEYS.expiry);
     
     if (authenticated === 'true' && expiry) {
-        const expiryTime = parseInt(expiry, 10);
-        if (Date.now() < expiryTime) {
+        if (Date.now() < parseInt(expiry, 10)) {
             return true;
         }
-        // Session expirée, nettoyer
-        logout();
+        // Session expirée
+        clearSession();
     }
     return false;
 }
 
-/**
- * Authentifie l'utilisateur
- */
-function setAuthenticated() {
-    localStorage.setItem(AUTH_KEY, 'true');
-    localStorage.setItem(AUTH_EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
+function createSession() {
+    const expiryTime = Date.now() + AUTH_CONFIG.sessionDuration;
+    localStorage.setItem(STORAGE_KEYS.authenticated, 'true');
+    localStorage.setItem(STORAGE_KEYS.expiry, expiryTime.toString());
 }
 
-/**
- * Déconnecte l'utilisateur
- */
-function logout() {
-    localStorage.removeItem(AUTH_KEY);
-    localStorage.removeItem(AUTH_EXPIRY_KEY);
+function clearSession() {
+    localStorage.removeItem(STORAGE_KEYS.authenticated);
+    localStorage.removeItem(STORAGE_KEYS.expiry);
 }
 
-/**
- * Vérifie le mot de passe
- */
-async function verifyPassword(password) {
-    const hash = await hashPassword(password);
-    return hash === PASSWORD_HASH;
-}
-
-/**
- * Affiche l'écran de login
- */
-function showLoginScreen() {
-    const loginHTML = `
-        <div id="auth-overlay" class="auth-overlay">
-            <div class="auth-container">
-                <div class="auth-icon">🔒</div>
-                <h2>Accès Protégé</h2>
-                <p>Cette section nécessite un mot de passe pour y accéder.</p>
-                <form id="auth-form" class="auth-form">
-                    <div class="auth-input-group">
-                        <input 
-                            type="password" 
-                            id="auth-password" 
-                            placeholder="Entrez le mot de passe"
-                            autocomplete="current-password"
-                            required
-                        >
-                    </div>
-                    <button type="submit" class="auth-button">
-                        Accéder
-                    </button>
-                    <p id="auth-error" class="auth-error" style="display: none;">
-                        Mot de passe incorrect
-                    </p>
-                </form>
-                <a href="../" class="auth-back-link">← Retour à l'accueil</a>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('afterbegin', loginHTML);
-    
-    // Cacher le contenu principal
-    const container = document.querySelector('.container');
-    if (container) {
-        container.style.display = 'none';
+async function showLoginScreen() {
+    try {
+        const response = await fetch('views/auth.html');
+        if (!response.ok) throw new Error('Impossible de charger le formulaire');
+        
+        const html = await response.text();
+        document.body.insertAdjacentHTML('afterbegin', html);
+        
+        const container = document.querySelector('.container');
+        if (container) {
+            container.style.display = 'none';
+        }
+        
+        initLoginForm();
+    } catch (error) {
+        console.error('Erreur de chargement du formulaire:', error);
+        location.reload();
     }
-    
-    // Gérer la soumission du formulaire
+}
+
+function initLoginForm() {
     const form = document.getElementById('auth-form');
     const passwordInput = document.getElementById('auth-password');
     const errorMessage = document.getElementById('auth-error');
+    const submitButton = form.querySelector('button[type="submit"]');
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        submitButton.disabled = true;
+        submitButton.textContent = '⏳ Vérification...';
         errorMessage.style.display = 'none';
         
-        const password = passwordInput.value;
-        const isValid = await verifyPassword(password);
-        
-        if (isValid) {
-            setAuthenticated();
-            hideLoginScreen();
-            // Appeler le callback si défini
-            if (onAuthSuccessCallback) {
-                onAuthSuccessCallback();
+        try {
+            const isValid = await verifyPassword(passwordInput.value);
+            
+            if (isValid) {
+                createSession();
+                hideLoginScreen();
+                if (onAuthSuccessCallback) {
+                    onAuthSuccessCallback();
+                }
+            } else {
+                errorMessage.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
             }
-        } else {
-            errorMessage.style.display = 'block';
-            passwordInput.value = '';
-            passwordInput.focus();
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Accéder';
         }
     });
     
-    // Focus sur le champ mot de passe
     passwordInput.focus();
 }
 
-/**
- * Cache l'écran de login et affiche le contenu
- */
 function hideLoginScreen() {
     const overlay = document.getElementById('auth-overlay');
     if (overlay) {
@@ -154,18 +143,20 @@ function hideLoginScreen() {
     }
 }
 
-/**
- * Initialise le système d'authentification
- * @param {Function} onSuccess - Callback à appeler après authentification réussie
- */
 function initAuth(onSuccess) {
     onAuthSuccessCallback = onSuccess;
-    if (!isAuthenticated()) {
-        showLoginScreen();
-        return false;
+    
+    if (isAuthenticated()) {
+        return true;
     }
-    return true;
+    
+    showLoginScreen();
+    return false;
 }
 
-// Exporter les fonctions pour utilisation dans d'autres modules
+function logout() {
+    clearSession();
+    location.reload();
+}
+
 export { initAuth, isAuthenticated, logout, hashPassword };

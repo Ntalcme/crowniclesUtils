@@ -1,0 +1,25 @@
+<div id="auth-overlay" class="auth-overlay">
+    <div class="auth-container">
+        <div class="auth-icon">🔒</div>
+        <h2>Accès Protégé</h2>
+        <p>Cette section nécessite un mot de passe pour y accéder.</p>
+        <form id="auth-form" class="auth-form">
+            <div class="auth-input-group">
+                <input 
+                    type="password" 
+                    id="auth-password" 
+                    placeholder="Entrez le mot de passe"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+            <button type="submit" class="auth-button">
+                Accéder
+            </button>
+            <p id="auth-error" class="auth-error" style="display: none;">
+                Mot de passe incorrect
+            </p>
+        </form>
+        <a href="../" class="auth-back-link">← Retour à l'accueil</a>
+    </div>
+</div>
