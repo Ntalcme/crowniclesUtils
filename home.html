@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outils Crownicles</title>
+    <link rel="stylesheet" href="styles/home.css">
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+    <script type="module" src="scripts/home/home.js"></script>
+</head>
+
+<body>
+    <noscript>
+    <div>
+        JavaScript est requis pour utiliser ce site.
+    </div>
+    </noscript>
+
+
+    <div id="app">
+        <header>
+            <h1>Crownicles Utils</h1>
+            <p>Outils et simulateurs pour Crownicles</p>
+            <input type="text" v-model="search" placeholder="Effectuer une recherche">
+        </header>
+
+        <main>
+            <section>
+                <article v-for="tool in filteredTools" :key="tool.id" class="tool-card">
+                    <span>{{ tool.icon }}</span>
+                    <span class="tool-status" :class="tool.status">{{ displayStatus(tool.status) }}</span>
+                    <a :href="tool.path">
+                        <h3>{{ tool.title }}</h3>
+                        <p>{{ tool.description }}</p>
+                    </a>
+                </article>
+            </section>
+        </main>
+
+        <footer>
+            <p>Créé par Ntalcme.</p>
+        </footer>
+    </div>
+</body>
