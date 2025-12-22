@@ -40,8 +40,17 @@
                     </a>
                 </div>
             </header>
-
-            <!-- content -->
+            <main>
+                <section>
+                    <article v-for="tool in tools" :key="tool.id" class="tool-card">
+                        <span>{{ tool.icon }}</span>
+                        <a :href="tool.path">
+                            <h3>{{ tool.title }}</h3>
+                            <p>{{ tool.description }}</p>
+                        </a>
+                    </article>
+                </section>
+            </main>
         </div>
     </div>
 </body>

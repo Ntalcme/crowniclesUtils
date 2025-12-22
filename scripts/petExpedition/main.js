@@ -2,6 +2,23 @@ import { isAuthenticated, verifyPassword, createSession } from './auth.js';
 
 const { createApp, ref } = Vue;
 
+const toolsConfig = [
+  {
+    id: 'simulator',
+    title: 'Simulateur',
+    icon: "🧪",
+    description: 'Simuler une expédition.',
+    path: './simulator.html',
+  },
+  {
+    id: 'analyzer',
+    title: 'Analyseur',
+    icon: "🔍",
+    description: 'Analyser une expédition.',
+    path: './analyzer.html',
+  }
+];
+
 createApp({
     setup() {
         const loggedIn = ref(isAuthenticated());
@@ -26,5 +43,8 @@ createApp({
         }
 
         return { loggedIn, password, error, login };
+    },
+    data() {
+        return { tools: toolsConfig };
     }
 }).mount('#app');

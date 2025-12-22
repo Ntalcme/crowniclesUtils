@@ -93,3 +93,45 @@ body {
     .btn-label { display: none; }
     .header-content { gap: 0.6rem; }
 }
+
+main section {
+    width: 100%;
+    max-width: 960px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.tool-card {
+    position: relative;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.tool-card a {
+    text-decoration: none;
+}
+
+.tool-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(233, 69, 96, 0.2);
+    border-color: var(--accent);
+}
+
+.tool-card h3 {
+    font-size: 1.25rem;
+    color: var(--accent);
+}
+
+.tool-card p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
