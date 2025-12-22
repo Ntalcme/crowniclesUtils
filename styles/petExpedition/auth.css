@@ -81,6 +81,28 @@
     animation: shake 0.4s ease;
 }
 
+/* Overlay back button (now inside the modal, below the login button) */
+.overlay-back {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.45rem 0.8rem;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    align-self: center;
+    margin-top: 0.25rem;
+}
+
+.overlay-back:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.24);
+    background: rgba(255,255,255,0.03);
+}
 
 @media (max-width: 480px) {
     .login-box {
@@ -94,6 +116,11 @@
 
     .login-box input[type="password"],
     .login-box button {
+        font-size: 0.95rem;
+    }
+
+    .overlay-back {
+        padding: 0.35rem 0.55rem;
         font-size: 0.95rem;
     }
 }

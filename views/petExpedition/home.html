@@ -21,13 +21,26 @@
                 <h2>Connexion requise</h2>
                 <input type="password" v-model="password" placeholder="Mot de passe">
                 <button @click="login">Se connecter</button>
+                <a href="../../home.html" class="overlay-back" title="Retour à l'accueil" aria-label="Retour">← Accueil</a>
                 <p v-if="error" class="error">{{ error }}</p>
             </div>
         </div>
 
         <!-- Principal content -->
         <div v-if="loggedIn" id="main-content">
-            <h1>Expéditions de Familiers</h1>
+            <header class="header-card">
+                <div class="header-content">
+                    <div class="header-left">
+                        <h1>Expéditions de Familiers</h1>
+                        <p>Gérez et lancez des expéditions pour vos familiers</p>
+                    </div>
+                    <a href="../../home.html" class="btn-home" title="Retour à l'accueil" aria-label="Accueil">
+                        <span class="btn-icon">🏠</span>
+                        <span class="btn-label">Accueil</span>
+                    </a>
+                </div>
+            </header>
+
             <!-- content -->
         </div>
     </div>
