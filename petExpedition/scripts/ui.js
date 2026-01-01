@@ -291,7 +291,7 @@ export function updateExpeditionInfo(expedition) {
                 <div class="bonus-grid">
                     ${formatWeight(weights.money, '💰 Argent')}
                     ${formatWeight(weights.experience, '⭐ XP')}
-                    ${formatWeight(weights.points, '🏆 Points')}
+                    ${formatWeight(weights.points, '🏅 Points')}
                 </div>
             </div>
             ${expedition.description ? `<div class="expedition-description"><em>${escapeHTML(expedition.description)}</em></div>` : ''}
@@ -385,7 +385,7 @@ export function updateAnalyzerExpeditionInfo(expedition) {
                 <div class="bonus-grid">
                     ${formatWeight(weights.money, '💰 Argent')}
                     ${formatWeight(weights.experience, '⭐ XP')}
-                    ${formatWeight(weights.points, '🏆 Points')}
+                    ${formatWeight(weights.points, '🏅 Points')}
                 </div>
             </div>
             ${expedition.description ? `<div class="expedition-description"><em>${escapeHTML(expedition.description)}</em></div>` : ''}
@@ -497,7 +497,7 @@ export async function initBranchSelect() {
         cachedBranches = await fetchGitHubBranches();
         
         // Définir la branche par défaut
-        const defaultBranch = 'develop';
+        const defaultBranch = 'master';
         if (cachedBranches.includes(defaultBranch)) {
             selectBranch(defaultBranch);
         } else if (cachedBranches.length > 0) {
