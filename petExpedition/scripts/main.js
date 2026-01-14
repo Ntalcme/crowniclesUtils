@@ -1,4 +1,4 @@
-import { fetchPetData } from './dataService.js';
+import { fetchPetData, fetchPetPreferences } from './dataService.js';
 import {
     initPetDropdown,
     initAnalyzerPetDropdown,
@@ -104,8 +104,14 @@ async function handleLoadData() {
     statusDiv.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Chargement des données depuis GitHub...</p></div>';
 
     try {
-        const { pets } = await fetchPetData(branch);
-        statusDiv.innerHTML = `<p style="color: var(--success);">✅ ${escapeHTML(pets.length)} familiers chargés avec succès depuis la branche <strong>${escapeHTML(branch)}</strong></p>`;
+        // Charger les données des familiers et leurs préférences en parallèle
+        const [{ pets }, preferences] = await Promise.all([
+            fetchPetData(branch),
+            fetchPetPreferences(branch)
+        ]);
+        
+        const prefCount = Object.keys(preferences).length;
+        statusDiv.innerHTML = `<p style="color: var(--success);">✅ ${escapeHTML(pets.length)} familiers chargés avec succès depuis la branche <strong>${escapeHTML(branch)}</strong><br>🐾 ${prefCount} préférences d'expédition chargées</p>`;
         revealSimulatorUI();
         showToast('✅ Données chargées !');
     } catch (error) {

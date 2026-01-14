@@ -1,6 +1,6 @@
 // ui.js - Gestion des interactions d'interface
-import { getPets, getPetById, getExpeditions, getExpeditionById } from './state.js';
-import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES, LOCATION_DESCRIPTIONS } from './constants.js';
+import { getPets, getPetById, getExpeditions, getExpeditionById, getPetPreferencesById } from './state.js';
+import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES, LOCATION_DESCRIPTIONS, PET_PREFERENCES } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML, normalizeString } from './utils.js';
 import { fetchGitHubBranches } from './dataService.js';
 
@@ -77,13 +77,52 @@ function selectPetGeneric(petId, searchInputId, hiddenInputId, statsDivId) {
     if (searchInput) searchInput.value = pet.name;
     if (hiddenInput) hiddenInput.value = String(petId);
     if (statsDiv) {
+        const preferences = getPetPreferencesById(pet.petTypeId || petId);
+        const prefsHtml = renderPetPreferences(preferences);
+        
         statsDiv.style.display = 'flex';
         statsDiv.innerHTML = `
             <div class="stat-item">Rareté: <span class="rarity-badge rarity-${pet.rarity}">${RARITY_NAMES[pet.rarity]}</span></div>
             <div class="stat-item">Force: <span>${escapeHTML(pet.force)}</span></div>
             <div class="stat-item">Vitesse: <span>${escapeHTML(pet.speed)}</span></div>
+            ${prefsHtml}
         `;
     }
+}
+
+/**
+ * Génère le HTML pour afficher les préférences d'un familier
+ */
+function renderPetPreferences(preferences) {
+    if (!preferences) return '';
+    
+    const { liked, disliked } = preferences;
+    if ((!liked || liked.length === 0) && (!disliked || disliked.length === 0)) {
+        return '<div class="stat-item pet-prefs"><span class="pref-neutral">🐾 Aucune préférence</span></div>';
+    }
+    
+    let html = '<div class="stat-item pet-prefs">';
+    
+    if (liked && liked.length > 0) {
+        const likedEmojis = liked.map(type => {
+            const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[type] || '📍';
+            const name = LOCATION_NAMES[type] || type;
+            return `<span class="pref-liked" title="${name} (aimé)">${emoji}</span>`;
+        }).join('');
+        html += `<span class="pref-label">❤️</span>${likedEmojis}`;
+    }
+    
+    if (disliked && disliked.length > 0) {
+        const dislikedEmojis = disliked.map(type => {
+            const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[type] || '📍';
+            const name = LOCATION_NAMES[type] || type;
+            return `<span class="pref-disliked" title="${name} (détesté)">${emoji}</span>`;
+        }).join('');
+        html += `<span class="pref-label">💔</span>${dislikedEmojis}`;
+    }
+    
+    html += '</div>';
+    return html;
 }
 
 export function selectPet(petId) {

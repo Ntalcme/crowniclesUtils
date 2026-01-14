@@ -1,6 +1,7 @@
 // calculations.js - Fonctions de calcul et scoring
 import { EXPEDITION_CONSTANTS } from './constants.js';
 import { calculateLinearScore, getCategoryName } from './utils.js';
+import { getPetExpeditionPreference } from './state.js';
 
 // Constantes pour le calcul du score de rentabilité
 // Le score mesure la RENTABILITÉ GLOBALE de l'expédition
@@ -73,7 +74,7 @@ export function calculateRewardIndex(durationMinutes, riskRate, difficulty, weal
     return Math.max(0, Math.min(9, Math.round(adjustedIndex)));
 }
 
-export function calculateEffectiveRisk(riskRate, difficulty, petForce, lovePoints, foodConsumed, foodRequired) {
+export function calculateEffectiveRisk(riskRate, difficulty, petForce, lovePoints, foodConsumed, foodRequired, petTypeId = null, locationType = null, durationMinutes = null) {
     let effectiveRisk = riskRate
         + difficulty / EXPEDITION_CONSTANTS.EFFECTIVE_RISK_FORMULA.DIFFICULTY_DIVISOR
         - petForce
@@ -87,6 +88,22 @@ export function calculateEffectiveRisk(riskRate, difficulty, petForce, lovePoint
         effectiveRisk *= EXPEDITION_CONSTANTS.NO_FOOD_RISK_MULTIPLIER;
     }
 
+    // Appliquer les modificateurs de préférence de familier
+    if (petTypeId !== null && locationType !== null) {
+        const preference = getPetExpeditionPreference(petTypeId, locationType);
+        const prefConfig = EXPEDITION_CONSTANTS.PET_PREFERENCES;
+        
+        if (preference === 'liked') {
+            // Terrain aimé: -5% de risque
+            effectiveRisk -= prefConfig.LIKED_EXPEDITION_FAILURE_REDUCTION;
+        } else if (preference === 'disliked' && durationMinutes !== null) {
+            // Terrain détesté ET durée < 12h: +10% de risque
+            if (durationMinutes < prefConfig.DISLIKED_EXPEDITION_DURATION_THRESHOLD_MINUTES) {
+                effectiveRisk += prefConfig.DISLIKED_SHORT_EXPEDITION_FAILURE_BONUS;
+            }
+        }
+    }
+
     return Math.max(0, Math.min(100, effectiveRisk));
 }
 
@@ -95,10 +112,18 @@ export function calculateSpeedDurationModifier(petSpeed) {
     return speedConfig.BASE_MULTIPLIER - petSpeed * speedConfig.REDUCTION_PER_SPEED_POINT;
 }
 
-export function calculateRewards(rewardIndex, locationType, durationMinutes = null, hasTokenBonus = false) {
+export function calculateRewards(rewardIndex, locationType, durationMinutes = null, hasTokenBonus = false, petTypeId = null) {
     const weights = EXPEDITION_CONSTANTS.LOCATION_REWARD_WEIGHTS[locationType];
     const tokensConfig = EXPEDITION_CONSTANTS.TOKENS.EXPEDITION;
     const bonusTokensConfig = EXPEDITION_CONSTANTS.BONUS_TOKENS;
+    
+    // Calculer le multiplicateur de préférence (n'affecte PAS les tokens)
+    let preferenceMultiplier = 1.0;
+    let preference = 'neutral';
+    if (petTypeId !== null) {
+        preference = getPetExpeditionPreference(petTypeId, locationType);
+        preferenceMultiplier = EXPEDITION_CONSTANTS.PET_PREFERENCES.REWARD_MULTIPLIERS[preference];
+    }
     
     // Calcul des tokens basé sur rewardIndex avec offset
     let baseTokens = Math.max(0, rewardIndex + tokensConfig.REWARD_INDEX_OFFSET);
@@ -125,14 +150,17 @@ export function calculateRewards(rewardIndex, locationType, durationMinutes = nu
     const avgRandomBoost = (bonusTokensConfig.RANDOM_BOOST_MIN + bonusTokensConfig.RANDOM_BOOST_MAX) / 2;
     tokens += avgRandomBoost;
     
-    // Application du poids de localisation
+    // Application du poids de localisation (tokens NON affectés par préférence)
     tokens = Math.round(tokens * (weights.tokens || 1));
     
+    // Calcul des récompenses de base avec multiplicateur de préférence
     return {
-        money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * weights.money),
-        experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * weights.experience),
-        points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * weights.points),
-        tokens: tokens
+        money: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.MONEY[rewardIndex] * weights.money * preferenceMultiplier),
+        experience: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.EXPERIENCE[rewardIndex] * weights.experience * preferenceMultiplier),
+        points: Math.round(EXPEDITION_CONSTANTS.REWARD_TABLES.POINTS[rewardIndex] * weights.points * preferenceMultiplier),
+        tokens: tokens,
+        preference: preference,
+        preferenceMultiplier: preferenceMultiplier
     };
 }
 
@@ -152,6 +180,75 @@ export function calculateTalismanDropChance(rewardIndex, hasBonus) {
         chance *= EXPEDITION_CONSTANTS.CLONE_TALISMAN.BONUS_EXPEDITION_MULTIPLIER;
     }
     return chance;
+}
+
+/**
+ * Génère un risque basé sur le type de terrain (power transformation)
+ * Les terrains dangereux ont plus de chances de générer des risques élevés
+ * @param {string} locationType - Type de terrain
+ * @param {number} random - Valeur aléatoire entre 0 et 1
+ * @returns {number} Risque entre 0 et 100
+ */
+export function generateTerrainBasedRisk(locationType, random) {
+    const config = EXPEDITION_CONSTANTS.TERRAIN_DIFFICULTY[locationType] || { skewFactor: 1.0 };
+    // Power transformation: random^(1/skewFactor)
+    // skewFactor < 1: favorise les hautes valeurs → terrains plus sûrs
+    // skewFactor > 1: favorise les basses valeurs → terrains dangereux
+    const transformedRandom = Math.pow(random, 1 / config.skewFactor);
+    return Math.round(transformedRandom * 100);
+}
+
+/**
+ * Calcule le changement d'amour basé sur le résultat et la préférence
+ * @param {boolean} isPartialSuccess - Si c'est un succès partiel
+ * @param {boolean} petLikedExpedition - Si le familier aimait le terrain
+ * @param {boolean} isTotalFailure - Si c'est un échec total
+ * @returns {number} Changement de points d'amour
+ */
+export function calculateLoveChange(isPartialSuccess, petLikedExpedition, isTotalFailure = false) {
+    const loveConfig = EXPEDITION_CONSTANTS.LOVE_CHANGES;
+    
+    if (isTotalFailure) {
+        return loveConfig.TOTAL_FAILURE;
+    }
+    
+    if (isPartialSuccess) {
+        // Succès partiel: amour UNIQUEMENT si terrain aimé
+        return petLikedExpedition ? loveConfig.PARTIAL_SUCCESS : 0;
+    }
+    
+    // Succès total: multiplicateur x2 si terrain aimé
+    return petLikedExpedition 
+        ? loveConfig.TOTAL_SUCCESS * loveConfig.LIKED_EXPEDITION_MULTIPLIER 
+        : loveConfig.TOTAL_SUCCESS;
+}
+
+/**
+ * Obtient le niveau de catégorie de risque (pour comparaisons)
+ * @param {number} riskRate - Taux de risque
+ * @returns {number} Niveau de catégorie (0-7)
+ */
+export function getRiskCategoryLevel(riskRate) {
+    const categories = EXPEDITION_CONSTANTS.RISK_CATEGORIES;
+    for (let i = 0; i < categories.length; i++) {
+        if (riskRate <= categories[i].max) return i;
+    }
+    return categories.length - 1;
+}
+
+/**
+ * Obtient les informations de catégorie de risque
+ * @param {number} riskRate - Taux de risque
+ * @returns {object} { name, emoji, level }
+ */
+export function getRiskCategoryInfo(riskRate) {
+    const categories = EXPEDITION_CONSTANTS.RISK_CATEGORIES;
+    for (let i = 0; i < categories.length; i++) {
+        if (riskRate <= categories[i].max) {
+            return { ...categories[i], level: i };
+        }
+    }
+    return { ...categories[categories.length - 1], level: categories.length - 1 };
 }
 
 /**

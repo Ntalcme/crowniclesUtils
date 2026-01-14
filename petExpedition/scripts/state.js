@@ -4,7 +4,8 @@ const state = {
     translations: {},
     mapLocations: {},
     mapTypes: {},
-    expeditions: []
+    expeditions: [],
+    petPreferences: {}  // Préférences d'expédition par type de familier
 };
 
 export function setPets(pets) {
@@ -53,4 +54,36 @@ export function getPetById(id) {
 
 export function getExpeditionById(id) {
     return state.expeditions.find(exp => exp.id === id) || null;
+}
+
+export function setPetPreferences(preferences) {
+    state.petPreferences = preferences;
+}
+
+export function getPetPreferences() {
+    return state.petPreferences;
+}
+
+/**
+ * Récupère la préférence d'un familier pour un type de lieu
+ * @param {number} petTypeId - ID du type de familier
+ * @param {string} locationType - Type de lieu (forest, mountain, etc.)
+ * @returns {'liked'|'neutral'|'disliked'} La préférence du familier
+ */
+export function getPetExpeditionPreference(petTypeId, locationType) {
+    const prefs = state.petPreferences[petTypeId];
+    if (!prefs) return 'neutral';
+    
+    if (prefs.liked && prefs.liked.includes(locationType)) return 'liked';
+    if (prefs.disliked && prefs.disliked.includes(locationType)) return 'disliked';
+    return 'neutral';
+}
+
+/**
+ * Récupère les préférences d'un familier
+ * @param {number} petTypeId - ID du type de familier
+ * @returns {object|null} { liked: string[], disliked: string[] }
+ */
+export function getPetPreferencesById(petTypeId) {
+    return state.petPreferences[petTypeId] || null;
 }

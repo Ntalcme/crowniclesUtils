@@ -1,11 +1,12 @@
 // dataService.js - Chargement des données distantes
-import { setPets, setTranslations, setMapLocations, setMapTypes, setExpeditions } from './state.js';
+import { setPets, setTranslations, setMapLocations, setMapTypes, setExpeditions, setPetPreferences } from './state.js';
 import { EXPEDITION_CONSTANTS } from './constants.js';
 
 const CACHE_KEY = 'crownicles_pets_cache';
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 const BRANCHES_CACHE_KEY = 'crownicles_branches_cache';
 const BRANCHES_CACHE_DURATION = 60 * 60 * 1000; // 1 heure
+const PET_PREFERENCES_CACHE_KEY = 'crownicles_pet_preferences_cache';
 
 // Mapping des types de carte vers les types d'expédition (depuis ExpeditionConstants.ts)
 const MAP_TYPE_TO_EXPEDITION = {
@@ -76,6 +77,119 @@ async function fetchJson(url, errorMessage) {
         throw new Error(errorMessage || `Impossible de charger ${url}`);
     }
     return response.json();
+}
+
+/**
+ * Charge les préférences d'expédition des familiers depuis GitHub
+ * @param {string} branch - La branche GitHub
+ * @returns {Promise<object>} Les préférences par ID de familier
+ */
+export async function fetchPetPreferences(branch) {
+    const cacheKey = `${PET_PREFERENCES_CACHE_KEY}_${branch}`;
+    const cached = localStorage.getItem(cacheKey);
+    
+    if (cached) {
+        try {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_DURATION) {
+                console.log('✅ Préférences de familiers chargées depuis le cache');
+                setPetPreferences(data);
+                return data;
+            }
+        } catch (e) {
+            console.warn('Cache des préférences corrompu, rechargement...', e);
+            localStorage.removeItem(cacheKey);
+        }
+    }
+
+    try {
+        const preferencesUrl = `https://raw.githubusercontent.com/Crownicles/Crownicles/${branch}/Lib/src/constants/PetExpeditionPreferences.ts`;
+        const response = await fetch(preferencesUrl);
+        
+        if (!response.ok) {
+            console.warn('Impossible de charger les préférences, utilisation des données par défaut');
+            const defaultPrefs = getDefaultPetPreferences();
+            setPetPreferences(defaultPrefs);
+            return defaultPrefs;
+        }
+        
+        const tsContent = await response.text();
+        const preferences = parsePetPreferencesFromTS(tsContent);
+        
+        setPetPreferences(preferences);
+        
+        // Sauvegarder dans le cache
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                data: preferences,
+                timestamp: Date.now()
+            }));
+            console.log('✅ Préférences de familiers mises en cache');
+        } catch (e) {
+            console.warn('Impossible de sauvegarder le cache des préférences', e);
+        }
+        
+        return preferences;
+    } catch (e) {
+        console.warn('Erreur lors du chargement des préférences:', e);
+        const defaultPrefs = getDefaultPetPreferences();
+        setPetPreferences(defaultPrefs);
+        return defaultPrefs;
+    }
+}
+
+/**
+ * Parse le fichier TypeScript des préférences de familiers
+ * @param {string} tsContent - Contenu du fichier TS
+ * @returns {object} Préférences par ID
+ */
+function parsePetPreferencesFromTS(tsContent) {
+    const preferences = {};
+    
+    // Regex pour extraire les préférences : petId: { liked: [...], disliked: [...] }
+    const petRegex = /(\d+):\s*\{\s*liked:\s*\[([\s\S]*?)\],\s*disliked:\s*\[([\s\S]*?)\]\s*\}/g;
+    
+    let match;
+    while ((match = petRegex.exec(tsContent)) !== null) {
+        const petId = parseInt(match[1]);
+        const likedStr = match[2];
+        const dislikedStr = match[3];
+        
+        // Extraire les noms de lieux
+        const liked = extractLocationTypes(likedStr);
+        const disliked = extractLocationTypes(dislikedStr);
+        
+        preferences[petId] = { liked, disliked };
+    }
+    
+    console.log(`✅ ${Object.keys(preferences).length} préférences de familiers chargées`);
+    return preferences;
+}
+
+/**
+ * Extrait les types de lieux d'une chaîne
+ */
+function extractLocationTypes(str) {
+    const types = [];
+    const typeRegex = /"(forest|mountain|desert|swamp|ruins|cave|plains|coast)"/g;
+    let match;
+    while ((match = typeRegex.exec(str)) !== null) {
+        types.push(match[1]);
+    }
+    return types;
+}
+
+/**
+ * Préférences par défaut (fallback)
+ */
+function getDefaultPetPreferences() {
+    return {
+        0: { liked: [], disliked: [] },
+        1: { liked: ['forest', 'plains', 'mountain'], disliked: ['swamp'] },
+        2: { liked: ['plains', 'ruins'], disliked: ['swamp', 'cave'] },
+        3: { liked: ['ruins', 'forest', 'plains'], disliked: ['swamp'] },
+        // ... autres familiers avec préférences par défaut
+    };
 }
 
 export async function fetchGitHubBranches() {

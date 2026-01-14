@@ -15,7 +15,31 @@ export const EXPEDITION_CONSTANTS = {
         CANCEL_BEFORE_DEPARTURE_BASE: -15,
         RECALL_DURING_EXPEDITION: -25,
         TOTAL_FAILURE: -3,
-        TOTAL_SUCCESS: 5
+        PARTIAL_SUCCESS: 2,
+        TOTAL_SUCCESS: 5,
+        LIKED_EXPEDITION_MULTIPLIER: 2  // Multiplicateur pour expéditions aimées
+    },
+    // Préférences de familier pour les expéditions
+    PET_PREFERENCES: {
+        LIKED_EXPEDITION_FAILURE_REDUCTION: 5,      // -5% risque si terrain aimé
+        DISLIKED_SHORT_EXPEDITION_FAILURE_BONUS: 10, // +10% risque si terrain détesté ET durée < 12h
+        DISLIKED_EXPEDITION_DURATION_THRESHOLD_MINUTES: 720, // 12 heures
+        REWARD_MULTIPLIERS: {
+            liked: 1.0,
+            neutral: 0.8,
+            disliked: 0.25
+        }
+    },
+    // Génération de risque basée sur le terrain (power transformation)
+    TERRAIN_DIFFICULTY: {
+        plains: { skewFactor: 0.5 },   // Le plus sûr
+        coast: { skewFactor: 0.65 },
+        forest: { skewFactor: 0.75 },
+        desert: { skewFactor: 1.0 },   // Neutre
+        mountain: { skewFactor: 1.2 },
+        swamp: { skewFactor: 1.4 },
+        ruins: { skewFactor: 1.6 },
+        cave: { skewFactor: 1.8 }      // Le plus dangereux
     },
     CLONE_TALISMAN: {
         BASE_DROP_CHANCE: 0.5,
@@ -107,12 +131,16 @@ export const EXPEDITION_CONSTANTS = {
         plains: "🌾",
         coast: "🌊"
     },
+    // 8 catégories de risque (nouveau système)
     RISK_CATEGORIES: [
-        { max: 15, name: "Paisible" },
-        { max: 30, name: "Peu risqué" },
-        { max: 50, name: "Modéré" },
-        { max: 70, name: "Dangereux" },
-        { max: 100, name: "Périlleux" }
+        { max: 10, name: "Anodin", emoji: "😌" },
+        { max: 20, name: "Très faible", emoji: "🙂" },
+        { max: 32, name: "Faible", emoji: "😐" },
+        { max: 45, name: "Modéré", emoji: "🤔" },
+        { max: 58, name: "Élevé", emoji: "😰" },
+        { max: 72, name: "Très élevé", emoji: "😨" },
+        { max: 86, name: "Extrême", emoji: "😱" },
+        { max: 100, name: "Désespéré", emoji: "💀" }
     ],
     DIFFICULTY_CATEGORIES: [
         { max: 20, name: "Aisé" },

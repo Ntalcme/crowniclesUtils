@@ -635,6 +635,74 @@ input[type="text"]:focus {
     color: var(--accent);
 }
 
+/* Pet Preferences Styles */
+.pet-prefs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.pref-label {
+    font-size: 0.85em;
+    margin-right: 2px;
+}
+
+.pref-liked,
+.pref-disliked,
+.pref-neutral {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    cursor: help;
+}
+
+.pref-liked {
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.pref-disliked {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.pref-neutral {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Preference indicator in expedition info */
+.expedition-preference-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85em;
+    margin-top: 8px;
+}
+
+.preference-liked {
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: var(--success);
+}
+
+.preference-disliked {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+}
+
+.preference-neutral {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
 /* ===== RESULTS ===== */
 #results {
     display: none;
