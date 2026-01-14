@@ -646,6 +646,7 @@ input[type="text"]:focus {
 .pref-label {
     font-size: 0.85em;
     margin-right: 2px;
+    cursor: help;
 }
 
 .pref-liked,
@@ -657,6 +658,15 @@ input[type="text"]:focus {
     border-radius: 4px;
     font-size: 0.9em;
     cursor: help;
+    position: relative;
+}
+
+/* Amélioration des tooltips natifs */
+.pref-liked[title],
+.pref-disliked[title],
+.pref-neutral[title],
+.pref-label[title] {
+    position: relative;
 }
 
 .pref-liked {

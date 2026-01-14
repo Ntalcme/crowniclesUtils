@@ -91,15 +91,21 @@ function selectPetGeneric(petId, searchInputId, hiddenInputId, statsDivId) {
 }
 
 /**
- * Génère le HTML pour afficher les préférences d'un familier
+ * Génère le HTML pour afficher les préférences d'un familier avec tooltips détaillés
  */
 function renderPetPreferences(preferences) {
     if (!preferences) return '';
     
     const { liked, disliked } = preferences;
     if ((!liked || liked.length === 0) && (!disliked || disliked.length === 0)) {
-        return '<div class="stat-item pet-prefs"><span class="pref-neutral">🐾 Aucune préférence</span></div>';
+        return `<div class="stat-item pet-prefs">
+            <span class="pref-neutral" title="Ce familier s'adapte à tous les terrains sans bonus ni malus particulier.">🐾 Aucune préférence</span>
+        </div>`;
     }
+    
+    // Textes d'explication des effets
+    const likedEffects = `Terrain aimé:\n✅ -5% de risque d'échec\n✅ 100% des récompenses\n✅ Double gain d'amour en cas de succès`;
+    const dislikedEffects = `Terrain détesté:\n⚠️ +10% de risque si durée < 12h\n⚠️ Seulement 25% des récompenses\n⚠️ Moins de gain d'amour`;
     
     let html = '<div class="stat-item pet-prefs">';
     
@@ -107,18 +113,18 @@ function renderPetPreferences(preferences) {
         const likedEmojis = liked.map(type => {
             const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[type] || '📍';
             const name = LOCATION_NAMES[type] || type;
-            return `<span class="pref-liked" title="${name} (aimé)">${emoji}</span>`;
+            return `<span class="pref-liked" title="${name}\n${likedEffects}">${emoji}</span>`;
         }).join('');
-        html += `<span class="pref-label">❤️</span>${likedEmojis}`;
+        html += `<span class="pref-label" title="Terrains aimés - Bonus de récompenses et réduction du risque">❤️</span>${likedEmojis}`;
     }
     
     if (disliked && disliked.length > 0) {
         const dislikedEmojis = disliked.map(type => {
             const emoji = EXPEDITION_CONSTANTS.LOCATION_EMOJIS[type] || '📍';
             const name = LOCATION_NAMES[type] || type;
-            return `<span class="pref-disliked" title="${name} (détesté)">${emoji}</span>`;
+            return `<span class="pref-disliked" title="${name}\n${dislikedEffects}">${emoji}</span>`;
         }).join('');
-        html += `<span class="pref-label">💔</span>${dislikedEmojis}`;
+        html += `<span class="pref-label" title="Terrains détestés - Malus de récompenses et risque augmenté">💔</span>${dislikedEmojis}`;
     }
     
     html += '</div>';

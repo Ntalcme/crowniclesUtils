@@ -58,24 +58,25 @@
                     </div>
                 </div>
 
-                <!-- Changements d'amour -->
+                <!-- Changements d'amour (dynamique selon préférence terrain) -->
                 <div class="card overview-card full-width">
                     <h3>💕 Changement d'amour</h3>
+                    <div id="preferenceIndicator" class="preference-indicator"></div>
                     <div class="love-change-grid compact">
                         <div class="love-change-item">
                             <span class="love-icon">✅</span>
                             <span class="love-label">Succès</span>
-                            <span class="love-value positive">+5</span>
+                            <span class="love-value positive" id="successLoveChange">+5</span>
                         </div>
                         <div class="love-change-item">
                             <span class="love-icon">⚠️</span>
                             <span class="love-label">Partiel</span>
-                            <span class="love-value neutral">0</span>
+                            <span class="love-value neutral" id="partialLoveChange">0</span>
                         </div>
                         <div class="love-change-item">
                             <span class="love-icon">❌</span>
                             <span class="love-label">Échec</span>
-                            <span class="love-value negative">-10</span>
+                            <span class="love-value negative" id="failureLoveChange">-3</span>
                         </div>
                         <div class="love-change-item">
                             <span class="love-icon">🔙</span>

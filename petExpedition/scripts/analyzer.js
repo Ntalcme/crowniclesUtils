@@ -65,7 +65,7 @@ function parseDuration(durationStr) {
 export function analyzeExpedition() {
     const petId = parseInt(document.getElementById('analyzerSelectedPetId').value, 10);
     const pet = getPetById(petId);
-    const lovePoints = Math.max(80, Math.min(110, parseInt(document.getElementById('analyzerLovePoints').value, 10)));
+    const lovePoints = Math.max(20, Math.min(110, parseInt(document.getElementById('analyzerLovePoints').value, 10)));
 
     const riskKey = document.getElementById('analyzerRisk').value;
     const difficultyKey = document.getElementById('analyzerDifficulty').value;

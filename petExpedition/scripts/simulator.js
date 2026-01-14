@@ -1,5 +1,5 @@
 // simulator.js - Logique du simulateur d'expédition
-import { getPetById, getExpeditionById } from './state.js';
+import { getPetById, getExpeditionById, getPetExpeditionPreference } from './state.js';
 import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML } from './utils.js';
 import {
@@ -37,7 +37,7 @@ export function simulateExpedition() {
         return;
     }
 
-    const lovePoints = Math.max(80, Math.min(110, parseInt(document.getElementById('lovePoints').value, 10)));
+    const lovePoints = Math.max(20, Math.min(110, parseInt(document.getElementById('lovePoints').value, 10)));
     const baseDuration = Math.max(10, Math.min(4320, parseInt(document.getElementById('duration').value, 10)));
     const riskRate = Math.max(0, Math.min(100, parseInt(document.getElementById('riskRate').value, 10)));
     const difficulty = Math.max(0, Math.min(100, parseInt(document.getElementById('difficulty').value, 10)));
@@ -52,7 +52,12 @@ export function simulateExpedition() {
     const rewardIndex = calculateRewardIndex(baseDuration, riskRate, difficulty, wealthRate);
     const foodRequired = EXPEDITION_CONSTANTS.FOOD_CONSUMPTION[rewardIndex];
     const foodConsumed = hasEnoughFood ? foodRequired : 0;
-    const effectiveRisk = calculateEffectiveRisk(riskRate, difficulty, pet.force, lovePoints, foodConsumed, foodRequired);
+    
+    // Obtenir la préférence du familier pour ce terrain
+    const petPreference = getPetExpeditionPreference(pet.petTypeId, locationType);
+    
+    // Calculer le risque effectif avec la préférence de terrain
+    const effectiveRisk = calculateEffectiveRisk(riskRate, difficulty, pet.force, lovePoints, foodConsumed, foodRequired, pet.petTypeId, locationType, effectiveDuration);
 
     // Calcul selon Crownicles: 2 rolls successifs avec effectiveRisk%
     // 1. Roll échec total (effectiveRisk%)
@@ -112,7 +117,8 @@ export function simulateExpedition() {
         bonusTalismanChance,
         weightedTalismanChance,
         weightedBonusTalismanChance,
-        profitabilityScore
+        profitabilityScore,
+        petPreference
     });
 
     showToast();
@@ -185,6 +191,45 @@ function displayResults(data) {
     if (cancelLoveChange) {
         const cancelPenalty = data.lovePoints > 80 ? Math.floor((data.lovePoints - 80) / 2) + 15 : 15;
         cancelLoveChange.textContent = `-${cancelPenalty}`;
+    }
+
+    // Update love changes based on pet preference (officiel Crownicles)
+    const loveConfig = EXPEDITION_CONSTANTS.LOVE_CHANGES;
+    const isLikedTerrain = data.petPreference === 'liked';
+    
+    // Succès total: +5 base, x2 si terrain aimé = +10
+    const successLove = isLikedTerrain 
+        ? loveConfig.TOTAL_SUCCESS * loveConfig.LIKED_EXPEDITION_MULTIPLIER 
+        : loveConfig.TOTAL_SUCCESS;
+    
+    // Succès partiel: +2 UNIQUEMENT si terrain aimé, sinon 0
+    const partialLove = isLikedTerrain ? loveConfig.PARTIAL_SUCCESS : 0;
+    
+    // Échec total: -3 (fixe)
+    const failureLove = loveConfig.TOTAL_FAILURE;
+    
+    const successLoveEl = document.getElementById('successLoveChange');
+    const partialLoveEl = document.getElementById('partialLoveChange');
+    const failureLoveEl = document.getElementById('failureLoveChange');
+    const preferenceIndicator = document.getElementById('preferenceIndicator');
+    
+    if (successLoveEl) {
+        successLoveEl.textContent = `+${successLove}`;
+        successLoveEl.className = 'love-value positive';
+    }
+    if (partialLoveEl) {
+        partialLoveEl.textContent = partialLove > 0 ? `+${partialLove}` : '0';
+        partialLoveEl.className = partialLove > 0 ? 'love-value positive' : 'love-value neutral';
+    }
+    if (failureLoveEl) {
+        failureLoveEl.textContent = `${failureLove}`;
+        failureLoveEl.className = 'love-value negative';
+    }
+    if (preferenceIndicator) {
+        const prefEmoji = data.petPreference === 'liked' ? '❤️' : data.petPreference === 'disliked' ? '💔' : '🐾';
+        const prefText = data.petPreference === 'liked' ? 'Terrain aimé (bonus x2)' : data.petPreference === 'disliked' ? 'Terrain détesté' : 'Terrain neutre';
+        const prefColor = data.petPreference === 'liked' ? 'var(--success)' : data.petPreference === 'disliked' ? 'var(--danger)' : 'var(--text-secondary)';
+        preferenceIndicator.innerHTML = `<span style="color: ${prefColor}; font-size: 0.9em; display: block; margin-bottom: 8px;">${prefEmoji} ${prefText}</span>`;
     }
 
     // Risk Analysis
