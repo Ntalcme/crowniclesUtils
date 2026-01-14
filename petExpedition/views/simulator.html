@@ -43,12 +43,12 @@
             </div>
             
             <div class="form-group">
-                <label>💕 Points d'amour (80-110)</label>
+                <label>💕 Points d'amour (20-110)</label>
                 <div class="slider-container">
-                    <input type="range" id="lovePoints" min="80" max="110" value="80" aria-label="Points d'amour du familier">
-                    <span class="slider-value" id="loveValue">80</span>
+                    <input type="range" id="lovePoints" min="20" max="110" value="20" aria-label="Points d'amour du familier">
+                    <span class="slider-value" id="loveValue">20</span>
                 </div>
-                <small id="loveMinHint" style="color: var(--warning);">Minimum requis pour partir en expédition</small>
+                <small id="loveMinHint" style="color: var(--warning);">Minimum requis: 20 points d'amour</small>
             </div>
             <div class="form-group">
                 <label>⏱️ Durée de l'expédition (minutes)</label>
@@ -137,6 +137,4 @@
         </div>
         <button class="btn-simulate" id="simulateButton">🚀 Simuler l'expédition</button>
     </div>
-
-    <div id="resultsMount"></div>
 </div>

@@ -104,18 +104,28 @@ async function handleLoadData() {
     statusDiv.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Chargement des données depuis GitHub...</p></div>';
 
     try {
-        // Charger les données des familiers et leurs préférences en parallèle
-        const [{ pets }, preferences] = await Promise.all([
-            fetchPetData(branch),
-            fetchPetPreferences(branch)
-        ]);
+        // Charger les données des familiers d'abord (obligatoire)
+        const { pets } = await fetchPetData(branch);
+        
+        // Charger les préférences (optionnel - ne fait pas échouer si erreur)
+        let preferences = {};
+        try {
+            preferences = await fetchPetPreferences(branch);
+        } catch (prefError) {
+            console.warn('Préférences non chargées, utilisation des valeurs par défaut:', prefError);
+        }
         
         const prefCount = Object.keys(preferences).length;
-        statusDiv.innerHTML = `<p style="color: var(--success);">✅ ${escapeHTML(pets.length)} familiers chargés avec succès depuis la branche <strong>${escapeHTML(branch)}</strong><br>🐾 ${prefCount} préférences d'expédition chargées</p>`;
+        let statusMsg = `✅ ${escapeHTML(String(pets.length))} familiers chargés avec succès depuis la branche <strong>${escapeHTML(branch)}</strong>`;
+        if (prefCount > 0) {
+            statusMsg += `<br>🐾 ${prefCount} préférences d'expédition chargées`;
+        }
+        statusDiv.innerHTML = `<p style="color: var(--success);">${statusMsg}</p>`;
         revealSimulatorUI();
         showToast('✅ Données chargées !');
     } catch (error) {
-        statusDiv.innerHTML = `<p style="color: var(--danger);">❌ Erreur: ${escapeHTML(error.message)}</p>`;
+        console.error('Erreur de chargement:', error);
+        statusDiv.innerHTML = `<p style="color: var(--danger);">❌ Erreur: ${escapeHTML(String(error.message))}</p>`;
     } finally {
         loadButton.disabled = false;
         loadButton.textContent = '🔄 Recharger les données';

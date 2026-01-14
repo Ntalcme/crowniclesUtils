@@ -31,12 +31,12 @@
             
             <!-- Points d'amour -->
             <div class="form-group">
-                <label>💕 Points d'amour (80-110)</label>
+                <label>💕 Points d'amour (20-110)</label>
                 <div class="slider-container">
-                    <input type="range" id="analyzerLovePoints" min="80" max="110" value="80" aria-label="Points d'amour du familier pour l'analyse">
-                    <span class="slider-value" id="analyzerLoveValue">80</span>
+                    <input type="range" id="analyzerLovePoints" min="20" max="110" value="20" aria-label="Points d'amour du familier pour l'analyse">
+                    <span class="slider-value" id="analyzerLoveValue">20</span>
                 </div>
-                <small id="analyzerLoveMinHint" style="color: var(--warning);">Minimum requis pour partir en expédition</small>
+                <small id="analyzerLoveMinHint" style="color: var(--warning);">Minimum requis: 20 points d'amour</small>
             </div>
             
             <!-- Durée estimée -->
@@ -46,15 +46,18 @@
                 <small style="color: var(--text-secondary);">Format: Xh, Xmin, XhYmin, Xj, XjYh</small>
             </div>
             
-            <!-- Dangerosité -->
+            <!-- Dangerosité (8 catégories officielles) -->
             <div class="form-group">
                 <label>⚠️ Dangerosité</label>
                 <select id="analyzerRisk">
-                    <option value="veryLow">🟢 Paisible (0-15%)</option>
-                    <option value="low">🟡 Peu risqué (16-30%)</option>
-                    <option value="medium" selected>🟠 Modéré (31-50%)</option>
-                    <option value="high">🔴 Dangereux (51-70%)</option>
-                    <option value="veryHigh">💀 Périlleux (71-100%)</option>
+                    <option value="trivial">🌿 Tranquille (0-10%)</option>
+                    <option value="veryLow">☀️ Serein (11-20%)</option>
+                    <option value="low">🌤️ Hasardeux (21-32%)</option>
+                    <option value="moderate" selected>⚡ Risqué (33-45%)</option>
+                    <option value="high">🔥 Dangereux (46-58%)</option>
+                    <option value="veryHigh">⚠️ Périlleux (59-72%)</option>
+                    <option value="extreme">💀 Mortel (73-86%)</option>
+                    <option value="desperate">⚰️ Désespéré (87-100%)</option>
                 </select>
             </div>
             

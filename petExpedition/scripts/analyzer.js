@@ -15,12 +15,16 @@ import {
 } from './calculations.js';
 
 const ANALYZER_RANGES = {
+    // 8 catégories de risque officielles Crownicles (Lang/fr/commands.json)
     risk: {
-        veryLow: { min: 0, max: 15, name: 'Paisible' },
-        low: { min: 16, max: 30, name: 'Peu risqué' },
-        medium: { min: 31, max: 50, name: 'Modéré' },
-        high: { min: 51, max: 70, name: 'Dangereux' },
-        veryHigh: { min: 71, max: 100, name: 'Périlleux' }
+        trivial: { min: 0, max: 10, name: 'Tranquille', emoji: '🌿' },
+        veryLow: { min: 11, max: 20, name: 'Serein', emoji: '☀️' },
+        low: { min: 21, max: 32, name: 'Hasardeux', emoji: '🌤️' },
+        moderate: { min: 33, max: 45, name: 'Risqué', emoji: '⚡' },
+        high: { min: 46, max: 58, name: 'Dangereux', emoji: '🔥' },
+        veryHigh: { min: 59, max: 72, name: 'Périlleux', emoji: '⚠️' },
+        extreme: { min: 73, max: 86, name: 'Mortel', emoji: '💀' },
+        desperate: { min: 87, max: 100, name: 'Désespéré', emoji: '⚰️' }
     },
     difficulty: {
         trivial: { min: 0, max: 20, name: 'Aisé' },

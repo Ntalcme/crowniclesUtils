@@ -1,6 +1,6 @@
 // ui.js - Gestion des interactions d'interface
 import { getPets, getPetById, getExpeditions, getExpeditionById, getPetPreferencesById } from './state.js';
-import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES, LOCATION_DESCRIPTIONS, PET_PREFERENCES } from './constants.js';
+import { EXPEDITION_CONSTANTS, RARITY_NAMES, LOCATION_NAMES, LOCATION_DESCRIPTIONS } from './constants.js';
 import { formatDuration, getCategoryName, escapeHTML, normalizeString } from './utils.js';
 import { fetchGitHubBranches } from './dataService.js';
 

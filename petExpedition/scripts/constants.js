@@ -7,6 +7,11 @@ export const EXPEDITION_CONSTANTS = {
     WEALTH_RATE_REWARD_INDEX_BONUS: 0.30,
     EFFECTIVE_RISK_FORMULA: { DIFFICULTY_DIVISOR: 4, LOVE_DIVISOR: 10 },
     NO_FOOD_RISK_MULTIPLIER: 3,
+    // Prérequis pour démarrer une expédition (officiel Crownicles)
+    REQUIREMENTS: {
+        MIN_LOVE_POINTS: 20,        // Minimum 20 points d'amour requis
+        MIN_LEVEL_FOR_TALISMAN: 20  // Niveau minimum pour le talisman
+    },
     SPEED_DURATION_MODIFIER: {
         BASE_MULTIPLIER: 1.20,
         REDUCTION_PER_SPEED_POINT: 0.5 / 30
@@ -72,7 +77,8 @@ export const EXPEDITION_CONSTANTS = {
     },
     REWARD_TABLES: {
         MONEY: [50, 120, 235, 435, 710, 1300, 2100, 3200, 4200, 5000],
-        EXPERIENCE: [50, 150, 350, 600, 950, 1400, 1950, 2550, 3000, 3500],
+        // XP réduit de 30% par rapport aux anciennes valeurs (officiel Crownicles)
+        EXPERIENCE: [35, 105, 245, 420, 665, 980, 1365, 1785, 2100, 2450],
         POINTS: [6, 20, 75, 145, 210, 340, 420, 585, 650, 710]
     },
     FOOD_CONSUMPTION: [1, 3, 5, 6, 8, 10, 12, 15, 25, 32],
@@ -131,16 +137,17 @@ export const EXPEDITION_CONSTANTS = {
         plains: "🌾",
         coast: "🌊"
     },
-    // 8 catégories de risque (nouveau système)
+    // 8 catégories de risque (officiel Crownicles - Lang/fr/commands.json)
+    // Clés de traduction: trivial, veryLow, low, moderate, high, veryHigh, extreme, desperate
     RISK_CATEGORIES: [
-        { max: 10, name: "Anodin", emoji: "😌" },
-        { max: 20, name: "Très faible", emoji: "🙂" },
-        { max: 32, name: "Faible", emoji: "😐" },
-        { max: 45, name: "Modéré", emoji: "🤔" },
-        { max: 58, name: "Élevé", emoji: "😰" },
-        { max: 72, name: "Très élevé", emoji: "😨" },
-        { max: 86, name: "Extrême", emoji: "😱" },
-        { max: 100, name: "Désespéré", emoji: "💀" }
+        { max: 10, key: "trivial", name: "Tranquille", emoji: "🌿" },
+        { max: 20, key: "veryLow", name: "Serein", emoji: "☀️" },
+        { max: 32, key: "low", name: "Hasardeux", emoji: "🌤️" },
+        { max: 45, key: "moderate", name: "Risqué", emoji: "⚡" },
+        { max: 58, key: "high", name: "Dangereux", emoji: "🔥" },
+        { max: 72, key: "veryHigh", name: "Périlleux", emoji: "⚠️" },
+        { max: 86, key: "extreme", name: "Mortel", emoji: "💀" },
+        { max: 100, key: "desperate", name: "Désespéré", emoji: "⚰️" }
     ],
     DIFFICULTY_CATEGORIES: [
         { max: 20, name: "Aisé" },
